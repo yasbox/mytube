@@ -1,0 +1,107 @@
+<FilesMatch "^data/.*$">
+  Require all denied
+</FilesMatch>
+# MyTube .htaccess 設定
+
+# セキュリティヘッダー
+<IfModule mod_headers.c>
+    # XSS保護
+    Header always set X-XSS-Protection "1; mode=block"
+    # クリックジャッキング保護
+    Header always set X-Frame-Options "SAMEORIGIN"
+    # MIMEタイプスニッフィング保護
+    Header always set X-Content-Type-Options "nosniff"
+    # リファラーポリシー
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# 静的アセットのキャッシュ制御
+<IfModule mod_expires.c>
+    ExpiresActive On
+    
+    # CSSファイル（1週間）
+    ExpiresByType text/css "access plus 1 week"
+    
+    # JavaScriptファイル（1週間）
+    ExpiresByType application/javascript "access plus 1 week"
+    ExpiresByType text/javascript "access plus 1 week"
+    
+    # 画像ファイル（1ヶ月）
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpg "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType image/webp "access plus 1 month"
+    ExpiresByType image/x-icon "access plus 1 month"
+    
+    # ファビコン（1年）
+    ExpiresByType image/vnd.microsoft.icon "access plus 1 year"
+    
+    # フォントファイル（1年）
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType application/font-woff "access plus 1 year"
+    ExpiresByType application/font-woff2 "access plus 1 year"
+</IfModule>
+
+# キャッシュヘッダーの設定
+<IfModule mod_headers.c>
+    # CSSファイル
+    <FilesMatch "\.css$">
+        Header set Cache-Control "public, max-age=604800"
+        Header append Vary Accept-Encoding
+    </FilesMatch>
+    
+    # JavaScriptファイル
+    <FilesMatch "\.js$">
+        Header set Cache-Control "public, max-age=604800"
+        Header append Vary Accept-Encoding
+    </FilesMatch>
+    
+    # 画像ファイル
+    <FilesMatch "\.(png|jpg|jpeg|gif|svg|webp|ico)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
+    
+    # ファビコン
+    <FilesMatch "favicon\.(ico|png|svg)$">
+        Header set Cache-Control "public, max-age=31536000"
+    </FilesMatch>
+</IfModule>
+
+# 圧縮設定
+<IfModule mod_deflate.c>
+    # 有効にするファイルタイプ
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE text/javascript
+</IfModule>
+
+# セキュリティ設定
+# PHPファイルへの直接アクセスを制限
+<Files "*.php">
+    # 管理ページ以外は直接アクセスを許可
+    <RequireAll>
+        Require all granted
+    </RequireAll>
+</Files>
+
+# 設定ファイルへのアクセスを禁止（data/ ディレクトリ配下を厳格に）
+<FilesMatch "^(data/|.*\.(env|ini|log|lock))$">
+  Require all denied
+</FilesMatch>
+
+# ディレクトリ一覧表示を無効化
+Options -Indexes
+
+# エラーページの設定
+ErrorDocument 404 /index.php
+ErrorDocument 403 /index.php 

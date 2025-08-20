@@ -1,0 +1,1014 @@
+/* 汎用入力・アイコンのスタイル（管理フォーム用） */
+.admin-input {
+  background: var(--input-bg) !important;
+  border: 1px solid var(--input-border) !important;
+  color: var(--text-primary) !important;
+  transition: all 0.2s ease !important;
+}
+
+.admin-input:focus {
+  border-color: var(--input-focus-border) !important;
+  box-shadow: 0 0 0 3px var(--input-focus-shadow) !important;
+  outline: none !important;
+}
+
+.admin-input::placeholder {
+  color: var(--text-muted) !important;
+}
+
+.admin-icon-btn {
+  color: var(--icon-muted) !important;
+}
+.admin-icon-btn:hover, .admin-icon-btn:focus {
+  color: var(--icon-active) !important;
+}
+.admin-icon {
+  color: currentColor !important;
+}
+
+/* 無効化時のブロック表現 */
+.blocked-section {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* 管理メニューカードのスタイル */
+.admin-menu-card {
+  background: rgba(31, 41, 55, 0.8);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.admin-menu-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.admin-menu-card a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* ダークモード時のトグルボタン調整 */
+[data-theme="dark"] .peer-checked\:bg-blue-600 {
+  background-color: #3b82f6 !important;
+}
+
+[data-theme="dark"] .after\:bg-white {
+  background-color: #f3f4f6 !important;
+}
+
+[data-theme="dark"] .after\:border-gray-300 {
+  border-color: #9ca3af !important;
+}
+
+/* より具体的なセレクターで優先度を上げる */
+[data-theme="dark"] .admin-card .peer-checked\:bg-blue-600 {
+  background-color: #3b82f6 !important;
+}
+
+[data-theme="dark"] .admin-card .after\:bg-white {
+  background-color: #f3f4f6 !important;
+}
+
+[data-theme="dark"] .admin-card .after\:border-gray-300 {
+  border-color: #9ca3af !important;
+}
+
+/* さらに具体的なセレクター */
+[data-theme="dark"] .admin-card label .peer-checked\:bg-blue-600 {
+  background-color: #3b82f6 !important;
+}
+
+[data-theme="dark"] .admin-card label .after\:bg-white {
+  background-color: #f3f4f6 !important;
+}
+
+[data-theme="dark"] .admin-card label .after\:border-gray-300 {
+  border-color: #9ca3af !important;
+}
+
+/* トグルスイッチの基本スタイル */
+.toggle-switch {
+  background-color: #e5e7eb; /* bg-gray-200 */
+}
+
+.toggle-switch::after {
+  background-color: #ffffff; /* after:bg-white */
+  border-color: #d1d5db; /* after:border-gray-300 */
+}
+
+/* チェック状態のスタイル（peer-checked:bg-blue-600の代替） */
+.peer:checked ~ .toggle-switch {
+  background-color: #2563eb; /* peer-checked:bg-blue-600 */
+}
+
+/* ダークモード時のトグルスイッチ */
+[data-theme="dark"] .toggle-switch {
+  background-color: #374151; /* ダークモード用の背景色 */
+}
+
+[data-theme="dark"] .toggle-switch::after {
+  background-color: #f3f4f6; /* ダークモード用のサムネイル色 */
+  border-color: #9ca3af; /* ダークモード用のボーダー色 */
+}
+
+/* ダークモード時のチェック状態（青い色を維持） */
+[data-theme="dark"] .peer:checked ~ .toggle-switch {
+  background-color: #3b82f6; /* ダークモードでも青い色を維持 */
+}
+
+/* MyTube 管理ページ専用スタイルシート */
+
+/* テーマ変数は theme.css で管理 */
+
+/* テーマ変数は theme.css で管理 */
+
+/* Tailwind CSS互換性のためのカスタムルール */
+.text-primary {
+  color: var(--text-primary) !important;
+}
+
+.text-secondary {
+  color: var(--text-secondary) !important;
+}
+
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+.bg-primary {
+  background-color: var(--primary-bg) !important;
+}
+
+.bg-secondary {
+  background-color: var(--secondary-bg) !important;
+}
+
+.bg-accent {
+  background-color: var(--accent-bg) !important;
+}
+
+ 
+
+/* 管理パネル専用の背景設定 */
+.admin-page-container {
+  background: var(--primary-bg);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+ 
+
+/* 管理ページの最大幅設定 */
+.admin-page-container {
+  max-width: 1920px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* 動画管理のタイトルスタイル */
+.video-title-admin {
+  color: var(--text-primary);
+  transition: color 0.3s ease;
+}
+
+/* 動画管理のコメントスタイル */
+.video-comment-admin {
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
+}
+
+/* 管理テーブルのデータセルスタイル */
+.admin-table-data {
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
+}
+
+/* 管理テーブルの行ホバー効果 */
+.admin-table tr {
+  transition: background-color 0.3s ease;
+}
+
+.admin-table tr:hover {
+  background-color: var(--table-hover);
+}
+
+/* 管理パネル専用ボタンスタイル（高優先度） */
+.admin-edit-btn {
+  background: transparent !important;
+  color: var(--text-primary) !important;
+  border: none !important;
+  transition: all 0.3s ease;
+}
+
+.admin-edit-btn:hover {
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-primary) !important;
+  transform: translateY(-1px);
+}
+
+.admin-convert-btn {
+  background: transparent !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--text-primary) !important;
+  transition: all 0.3s ease;
+}
+
+.admin-convert-btn:hover {
+  background: transparent !important;
+  border-color: var(--text-primary) !important;
+  color: var(--text-primary) !important;
+  transform: translateY(-1px);
+}
+
+.admin-public-btn {
+  background: var(--admin-public-bg) !important;
+  color: var(--admin-public-text) !important;
+  border: 1px solid var(--admin-public-bg) !important;
+  transition: all 0.3s ease;
+}
+
+.admin-public-btn:hover {
+  background: var(--admin-public-hover) !important;
+  border-color: var(--admin-public-hover) !important;
+  transform: translateY(-1px);
+}
+
+.admin-private-btn {
+  background: var(--admin-private-bg) !important;
+  color: var(--admin-private-text) !important;
+  border: 1px solid var(--admin-private-bg) !important;
+  transition: all 0.3s ease;
+}
+
+.admin-private-btn:hover {
+  background: var(--admin-private-hover) !important;
+  border-color: var(--admin-private-hover) !important;
+  transform: translateY(-1px);
+}
+
+.admin-delete-btn {
+  background: transparent !important;
+  color: var(--text-primary) !important;
+  border: 1px solid transparent !important;
+  transition: all 0.3s ease;
+}
+
+.admin-delete-btn:hover {
+  background: var(--admin-delete-bg) !important;
+  border: 1px solid var(--admin-delete-bg) !important;
+  color: var(--admin-delete-text) !important;
+  transform: translateY(-1px);
+}
+
+/* ダークモード時の行ホバー効果 */
+[data-theme="dark"] .admin-table tr:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* 編集モーダルスタイル */
+.edit-modal {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow);
+}
+
+.edit-modal-header {
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--card-border);
+}
+
+.edit-modal-title {
+  margin-bottom: 0;
+  color: var(--text-primary);
+}
+
+.edit-modal-close {
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
+}
+
+.edit-modal-close:hover {
+  color: var(--text-primary);
+  background: var(--accent-bg);
+}
+
+.edit-modal-content {
+  background: var(--card-bg);
+}
+
+.edit-modal-label {
+  color: var(--text-primary);
+}
+
+.edit-modal-input {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+}
+
+.edit-modal-input:focus {
+  border-color: var(--input-focus-border);
+  box-shadow: 0 0 0 3px var(--input-focus-shadow);
+  outline: none;
+}
+
+.edit-modal-input::placeholder {
+  color: var(--text-muted);
+}
+
+.edit-modal-textarea {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+}
+
+.edit-modal-textarea:focus {
+  border-color: var(--input-focus-border);
+  box-shadow: 0 0 0 3px var(--input-focus-shadow);
+  outline: none;
+}
+
+.edit-modal-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.edit-modal-footer {
+  background: var(--card-bg);
+  border-top: 1px solid var(--card-border);
+}
+
+.edit-modal-cancel-btn {
+  background: var(--btn-secondary-bg);
+  color: var(--btn-secondary-text);
+  border: 1px solid var(--btn-secondary-bg);
+  transition: all 0.3s ease;
+}
+
+.edit-modal-cancel-btn:hover {
+  background: var(--btn-secondary-hover);
+}
+
+.edit-modal-update-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  transition: all 0.3s ease;
+}
+
+.edit-modal-update-btn:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+}
+
+/* テーマ変数は theme.css で管理 */
+
+/* セクションタイトル */
+.section-title {
+  color: var(--text-primary);
+  font-weight: bold;
+}
+
+/* 設定セクションの見出し */
+.settings-section h3 {
+  color: var(--text-primary);
+  border-bottom-color: var(--card-border);
+}
+
+/* 設定ラベル */
+.settings-label {
+  color: var(--text-primary);
+}
+
+/* 設定説明文 */
+.settings-description {
+  color: var(--text-secondary);
+}
+
+/* 統計情報グリッド */
+.stats-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+/* 統計カード */
+.stats-card {
+  transition: all 0.3s ease;
+}
+
+/* 統計アイコン */
+.stats-icon {
+  background: linear-gradient(to right, var(--color-from), var(--color-to));
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 統計ラベル */
+.stats-label {
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+/* 統計値 */
+.stats-value {
+  color: var(--text-primary);
+  font-weight: bold;
+}
+
+/* セクションヘッダー */
+.section-header {
+  display: flex;
+  align-items: left;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+/* 管理テーブルコンテナ */
+.admin-table-container {
+  overflow-x: auto;
+}
+
+/* 管理テーブル */
+.admin-table {
+  width: 100%;
+  font-size: 0.875rem;
+}
+
+/* タイトルとコメントを含む要素の最大幅設定 */
+.admin-table td:first-child .flex-1.min-w-0 {
+  max-width: 150px; /* モバイル時の最大幅 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* タイトルとコメントのテキスト要素に対する省略設定 */
+.admin-table td:first-child .flex-1.min-w-0 p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.admin-table th {
+  text-align: left;
+  padding: 0.75rem 0.5rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--card-border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+}
+
+/* ボタンスタイル */
+.admin-table button,
+.admin-table .btn {
+  color: var(--button-text);
+  background: var(--button-bg);
+  border: 1px solid var(--button-border);
+  transition: all 0.3s ease;
+}
+
+.admin-table button:hover,
+.admin-table .btn:hover {
+  background: var(--button-hover);
+  transform: translateY(-1px);
+}
+
+ 
+
+/* モーダルスタイル */
+#conversion-progress-modal .bg-gray-800 {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+}
+
+#conversion-progress-modal h3,
+#conversion-progress-modal p,
+#conversion-progress-modal span {
+  color: var(--text-primary);
+}
+
+#conversion-progress-modal .opacity-75 {
+  color: var(--text-secondary);
+}
+
+/* 変換モーダルスタイル */
+.conversion-modal {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow);
+}
+
+.conversion-modal-header {
+  color: var(--text-primary);
+}
+
+.conversion-modal-close {
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
+}
+
+.conversion-modal-close:hover {
+  color: var(--text-primary);
+  background: var(--accent-bg);
+}
+
+.conversion-modal-content {
+  background: var(--card-bg);
+}
+
+.conversion-modal-title {
+  color: var(--text-primary);
+}
+
+.conversion-modal-filename {
+  color: var(--text-secondary);
+}
+
+.conversion-modal-thumbnail {
+  background: var(--accent-bg);
+  border: 1px solid var(--card-border);
+}
+
+/* 編集モーダルのサムネイル（max-width制限を撤廃し、モーダル幅に追従） */
+.edit-modal-thumb {
+  max-width: none;
+  width: 80%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* 編集モーダルの幅（親要素に対する割合） */
+.edit-modal {
+  width: 80%;
+  max-width: none; /* Tailwindのmax-w制限を無効化 */
+}
+
+.conversion-modal-progress-bg {
+  background: var(--accent-bg);
+}
+
+.conversion-modal-progress-bar {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.conversion-modal-details {
+  background: var(--accent-bg);
+  border: 1px solid var(--card-border);
+}
+
+.conversion-modal-details-label {
+  color: var(--text-secondary);
+}
+
+.conversion-modal-details-value {
+  color: var(--text-primary);
+}
+
+.conversion-modal-cancel-btn {
+  background: linear-gradient(135deg, var(--btn-danger-bg) 0%, var(--btn-danger-hover) 100%);
+  color: var(--btn-danger-text);
+  transition: all 0.3s ease;
+}
+
+.conversion-modal-cancel-btn:hover {
+  background: linear-gradient(135deg, var(--btn-danger-hover) 0%, var(--btn-danger-bg) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+}
+
+/* テーマ変数は theme.css で管理 */
+
+.admin-table th:first-child {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.admin-table th:nth-child(2),
+.admin-table th:nth-child(3) {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.admin-table th:nth-child(4),
+.admin-table th:nth-child(5) {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.admin-table .desktop-actions-column {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+/* レスポンシブ対応 */
+@media (min-width: 768px) {
+  .admin-page-container {
+    max-width: 1200px !important;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .admin-table {
+    font-size: 1rem;
+  }
+  
+  .admin-table th {
+    padding: 1rem 1rem;
+  }
+  
+  .admin-table th:first-child {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .admin-table th:nth-child(2),
+  .admin-table th:nth-child(3) {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .admin-table th:nth-child(4),
+  .admin-table th:nth-child(5) {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .admin-table .desktop-actions-column {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .admin-table td:first-child .flex-1.min-w-0 {
+    max-width: 200px;
+  }
+  
+  .admin-table td:first-child .flex-1.min-w-0 p {
+    max-width: 200px;
+  }
+  
+  .stats-card {
+    padding: 1.5rem;
+  }
+  
+  .stats-icon {
+    width: 3.5rem;
+    height: 3.5rem;
+  }
+  
+  .stats-icon svg {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+  
+  .stats-label {
+    font-size: 1rem;
+  }
+  
+  .stats-value {
+    font-size: 1.5rem;
+  }
+  
+  .section-title {
+    font-size: 1.875rem;
+  }
+  
+  .admin-page-container {
+    padding: 1.5rem;
+  }
+  
+  .admin-card {
+    padding: 1.5rem;
+  }
+  
+  .admin-table .edit-thumb-btn svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  
+  .admin-table .action-button-mobile svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .admin-page-container {
+    max-width: 1400px !important;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  
+  .admin-table {
+    font-size: 1.125rem;
+  }
+  
+  .admin-table td:first-child .flex-1.min-w-0 {
+    max-width: 250px;
+  }
+  
+  .admin-table td:first-child .flex-1.min-w-0 p {
+    max-width: 250px;
+  }
+  
+  .stats-card {
+    padding: 1.5rem;
+  }
+  
+  .stats-icon {
+    width: 5rem;
+    height: 5rem;
+  }
+  
+  .stats-icon svg {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  
+  .stats-label {
+    font-size: 1.125rem;
+  }
+  
+  .stats-value {
+    font-size: 1.875rem;
+  }
+  
+  .section-title {
+    font-size: 2.25rem;
+  }
+  
+  .admin-page-container {
+    padding: 2rem;
+  }
+  
+  .admin-card {
+    padding: 2rem;
+  }
+  
+  .admin-table .edit-thumb-btn svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+  
+  .admin-table .action-button-mobile svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .admin-page-container {
+    max-width: 1600px !important;
+  }
+  
+  .xl\:p-8 {
+    padding: 2rem;
+  }
+  
+  .xl\:text-4xl {
+    font-size: 2.25rem;
+  }
+  
+  .admin-table td:first-child .flex-1.min-w-0 {
+    max-width: 300px;
+  }
+  
+  .admin-table td:first-child .flex-1.min-w-0 p {
+    max-width: 300px;
+  }
+  
+  .stats-card {
+    padding: 2rem;
+  }
+  
+  .stats-icon {
+    width: 5rem;
+    height: 5rem;
+  }
+  
+  .stats-icon svg {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  
+  .stats-label {
+    font-size: 1.25rem;
+  }
+  
+  .stats-value {
+    font-size: 2.25rem;
+  }
+  
+  .section-title {
+    font-size: 2.5rem;
+  }
+  
+  .admin-page-container {
+    padding: 2rem;
+  }
+  
+  .admin-card {
+    padding: 2rem;
+  }
+  
+  .admin-table .edit-thumb-btn svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+  
+  .admin-table .action-button-mobile svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+@media (min-width: 1536px) {
+  .admin-page-container {
+    max-width: 1800px !important;
+  }
+  
+  .admin-table td:first-child .flex-1.min-w-0 {
+    max-width: 350px;
+  }
+  
+  .admin-table td:first-child .flex-1.min-w-0 p {
+    max-width: 350px;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .stats-card {
+    padding: 1rem;
+  }
+  
+  .stats-icon {
+    width: 3rem;
+    height: 3rem;
+  }
+  
+  .stats-icon svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+  
+  .stats-label {
+    font-size: 0.875rem;
+  }
+  
+  .stats-value {
+    font-size: 1.25rem;
+  }
+  
+  .admin-table .edit-thumb-btn svg {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+  
+  .admin-table .action-button-mobile svg {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+  
+  .section-title {
+    font-size: 1.5rem;
+  }
+  
+  .admin-page-container {
+    padding: 1rem;
+  }
+  
+  .admin-card {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .stats-card {
+    padding: 0.75rem;
+  }
+  
+  .stats-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  
+  .stats-icon svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  
+  .stats-label {
+    font-size: 0.75rem;
+  }
+  
+  .stats-value {
+    font-size: 1rem;
+  }
+  
+  .section-title {
+    font-size: 1.25rem;
+  }
+  
+  .admin-page-container {
+    padding: 0.5rem;
+  }
+  
+  .admin-card {
+    padding: 0.75rem;
+  }
+  
+  .admin-table .edit-thumb-btn svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+  
+  .admin-table .action-button-mobile svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .admin-page-container {
+    max-width: 1000px !important;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .admin-table {
+    font-size: 0.875rem;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .admin-table {
+    font-size: 0.875rem;
+  }
+}
+
+/* スクロールバーのカスタマイズ */
+.admin-table-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.admin-table-container::-webkit-scrollbar-track {
+  background: var(--secondary-bg);
+  border-radius: 4px;
+}
+
+.admin-table-container::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.admin-table-container::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* アニメーション */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+} 

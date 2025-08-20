@@ -1,0 +1,253 @@
+/* MyTube 共通テーマ変数 */
+
+:root {
+  /* ライトモード（デフォルト） */
+  --primary-bg: #ffffff;
+  --secondary-bg: #f8fafc;
+  --accent-bg: #f1f5f9;
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --text-primary: #1f2937;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+  --card-bg: #f5f8fb;
+  --card-border: rgba(0, 0, 0, 0.15);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --accent-color: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-focus: rgba(59, 130, 246, 0.2);
+  
+  /* ソートボタン（ライト） */
+  --sort-active-bg: rgba(59, 130, 246, 0.12);
+  
+  /* ボタン関連 */
+  --btn-primary-bg: #3b82f6;
+  --btn-primary-hover: #2563eb;
+  --btn-primary-text: #ffffff;
+  --btn-secondary-bg: #6b7280;
+  --btn-secondary-hover: #4b5563;
+  --btn-secondary-text: #ffffff;
+  --btn-danger-bg: #ef4444;
+  --btn-danger-hover: #dc2626;
+  --btn-danger-text: #ffffff;
+  --btn-success-bg: #10b981;
+  --btn-success-hover: #059669;
+  --btn-success-text: #ffffff;
+  
+  /* フォーム関連 */
+  --input-bg: #ffffff;
+  --input-border: #d1d5db;
+  --input-focus-border: #3b82f6;
+  --input-focus-shadow: rgba(59, 130, 246, 0.2);
+  --input-placeholder: #9ca3af;
+  
+  /* テーブル関連 */
+  --table-header-bg: #f9fafb;
+  --table-row-hover: #f3f4f6;
+  --table-border: #e5e7eb;
+  --table-hover: rgba(0, 0, 0, 0.05);
+  
+  /* ボタン関連（管理パネル用） */
+  --button-bg: #6b7280;
+  --button-hover: #4b5563;
+  --button-text: #ffffff;
+  --button-border: #6b7280;
+  
+  /* 管理パネル専用ボタン色 */
+  --admin-edit-bg: #3b82f6;
+  --admin-edit-hover: #2563eb;
+  --admin-edit-text: #ffffff;
+  --admin-convert-bg: #3b82f6;
+  --admin-convert-hover: #2563eb;
+  --admin-convert-text: #ffffff;
+  --admin-public-bg: #3b82f6;
+  --admin-public-hover: #2563eb;
+  --admin-public-text: #ffffff;
+  --admin-private-bg: #6b7280;
+  --admin-private-hover: #4b5563;
+  --admin-private-text: #ffffff;
+  --admin-delete-bg: #ef4444;
+  --admin-delete-hover: #dc2626;
+  --admin-delete-text: #ffffff;
+  
+  /* アイコン関連 */
+  --icon-muted: #6b7280;
+  --icon-active: #3b82f6;
+  
+  /* モーダル関連 */
+  --modal-bg: #ffffff;
+  --modal-overlay: rgba(0, 0, 0, 0.5);
+  --modal-border: #e5e7eb;
+  
+  /* 追加の色変数 */
+  --blue-100: #dbeafe;
+  --blue-300: #93c5fd;
+  --blue-600: #2563eb;
+  --blue-800: #1e40af;
+  --blue-900-20: rgba(30, 58, 138, 0.2);
+  --green-100: #dcfce7;
+  --green-300: #86efac;
+  --green-600: #16a34a;
+  --green-800: #15803d;
+  --gray-100: #f3f4f6;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+  
+  /* 状態色 */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
+  
+  /* Tailwind CSS互換性 */
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+  
+  /* ヘッダー専用変数 */
+  --header-bg: var(--primary-bg);
+  --header-text: var(--text-primary);
+  --hamburger-line: var(--text-secondary);
+  --header-border: var(--card-border);
+  
+  /* 透明度付き色変数 */
+  --blue-500-10: rgba(59, 130, 246, 0.1);
+  --green-500-10: rgba(16, 185, 129, 0.1);
+
+  /* Typography scale */
+  --h1-sm: 2rem;    /* 32px */
+  --h1-md: 2.5rem;  /* 40px */
+  --h2-sm: 1.75rem; /* 28px */
+  --h2-md: 2rem;    /* 32px */
+  --h3-sm: 1.5rem;  /* 24px */
+  --h3-md: 1.75rem; /* 28px */
+  --h4-sm: 1.25rem; /* 20px */
+  --h4-md: 1.5rem;  /* 24px */
+  --h5-sm: 1.125rem;/* 18px */
+  --h5-md: 1.25rem; /* 20px */
+  --h6-sm: 1rem;    /* 16px */
+  --h6-md: 1.125rem;/* 18px */
+}
+
+/* ダークモード */
+[data-theme="dark"] {
+  --primary-bg: #121212;
+  --secondary-bg: #1e1e1e;
+  --accent-bg: #2d2d2d;
+  --glass-bg: rgba(0, 0, 0, 0.4);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --text-primary: #f5f5f5;
+  --text-secondary: #b0b0b0;
+  --text-muted: #808080;
+  --card-bg: #1a1a1a;
+  --card-border: rgba(255, 255, 255, 0.15);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --accent-color: #9ca3af;
+  --accent-hover: #d1d5db;
+  --accent-focus: rgba(156, 163, 175, 0.2);
+  
+  /* ソートボタン（ダーク） */
+  --sort-active-bg: rgba(156, 163, 175, 0.18);
+  
+  /* ボタン関連 */
+  --btn-primary-bg: #9ca3af;
+  --btn-primary-hover: #d1d5db;
+  --btn-primary-text: #1f2937;
+  --btn-secondary-bg: #6b7280;
+  --btn-secondary-hover: #9ca3af;
+  --btn-secondary-text: #ffffff;
+  --btn-danger-bg: #ef4444;
+  --btn-danger-hover: #f87171;
+  --btn-danger-text: #ffffff;
+  --btn-success-bg: #10b981;
+  --btn-success-hover: #34d399;
+  --btn-success-text: #ffffff;
+  
+  /* フォーム関連 */
+  --input-bg: #2d2d2d;
+  --input-border: #404040;
+  --input-focus-border: #9ca3af;
+  --input-focus-shadow: rgba(156, 163, 175, 0.2);
+  --input-placeholder: #808080;
+  
+  /* テーブル関連 */
+  --table-header-bg: #2d2d2d;
+  --table-row-hover: #404040;
+  --table-border: #404040;
+  --table-hover: rgba(255, 255, 255, 0.05);
+  
+  /* ボタン関連（管理パネル用） */
+  --button-bg: #6b7280;
+  --button-hover: #9ca3af;
+  --button-text: #ffffff;
+  --button-border: #6b7280;
+  
+  /* 管理パネル専用ボタン色（ダークモード） */
+  --admin-edit-bg: #1e40af;
+  --admin-edit-hover: #1e3a8a;
+  --admin-edit-text: #ffffff;
+  --admin-convert-bg: #1e40af;
+  --admin-convert-hover: #1e3a8a;
+  --admin-convert-text: #ffffff;
+  --admin-public-bg: #1e40af;
+  --admin-public-hover: #1e3a8a;
+  --admin-public-text: #ffffff;
+  --admin-private-bg: #374151;
+  --admin-private-hover: #1f2937;
+  --admin-private-text: #ffffff;
+  --admin-delete-bg: #991b1b;
+  --admin-delete-hover: #7f1d1d;
+  --admin-delete-text: #ffffff;
+  
+  /* アイコン関連 */
+  --icon-muted: #808080;
+  --icon-active: #9ca3af;
+  
+  /* モーダル関連 */
+  --modal-bg: #2d2d2d;
+  --modal-overlay: rgba(0, 0, 0, 0.7);
+  --modal-border: #404040;
+  
+  /* 追加の色変数（ダークモード） */
+  --blue-100: #1e3a8a;
+  --blue-300: #3b82f6;
+  --blue-600: #60a5fa;
+  --blue-800: #93c5fd;
+  --blue-900-20: rgba(30, 58, 138, 0.3);
+  --green-100: #065f46;
+  --green-300: #059669;
+  --green-600: #10b981;
+  --green-800: #34d399;
+  --gray-100: #374151;
+  --gray-300: #6b7280;
+  --gray-400: #9ca3af;
+  --gray-500: #d1d5db;
+  --gray-600: #e5e7eb;
+  --gray-800: #f3f4f6;
+  --gray-900: #f9fafb;
+  
+  /* 状態色 */
+  --success: #34d399;
+  --warning: #fbbf24;
+  --error: #f87171;
+  --info: #9ca3af;
+  
+  /* Tailwind CSS互換性 */
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+  
+  /* ヘッダー専用変数 */
+  --header-bg: var(--primary-bg);
+  --header-text: var(--text-primary);
+  --hamburger-line: var(--text-secondary);
+  --header-border: var(--card-border);
+  
+  /* 透明度付き色変数 */
+  --blue-500-10: rgba(59, 130, 246, 0.1);
+  --green-500-10: rgba(16, 185, 129, 0.1);
+}

@@ -1,0 +1,256 @@
+/* MyTube ヘッダー専用スタイルシート */
+
+/* ヘッダー全体のスタイル */
+.glass-effect-header {
+  background: var(--primary-bg);
+  border-bottom: 1px solid var(--glass-border);
+  backdrop-filter: blur(8px);
+}
+
+/* メニュー開時はヘッダーのblurを無効化（Chrome/Edgeでのbackdrop-filter衝突回避） */
+.glass-effect-header.menu-open {
+  backdrop-filter: none !important;
+}
+
+/* ヘッダー高さのCSS変数（JSで更新） */
+:root {
+  --header-height: 0px;
+}
+
+/* ヘッダーロゴとタイトルのスタイル */
+.glass-effect-header h1 {
+  color: var(--header-text);
+}
+
+.glass-effect-header .text-secondary {
+  color: var(--header-text);
+}
+
+/* ハンバーガーメニューボタンのスタイル */
+#mobile-menu-button {
+  background: transparent;
+  border: none;
+  color: var(--header-text);
+}
+
+/* ハンバーガー（通常時）のホバー背景 */
+#mobile-menu-button:hover { background: var(--accent-bg); }
+
+/* ハンバーガーメニューの線のスタイル */
+#hamburger-icon span {
+  background-color: var(--hamburger-line) !important;
+  transition: all 0.3s ease;
+}
+
+/* ハンバーガーメニューが開いている状態 */
+#mobile-menu-button.menu-open #hamburger-icon span {
+  background-color: var(--header-text) !important;
+}
+
+/* メニューオープン時のハンバーガー → バツ印の安定配置 */
+#hamburger-icon { position: relative; }
+#mobile-menu-button.menu-open #hamburger-icon { height: 22px; }
+#mobile-menu-button.menu-open #hamburger-icon > span { margin-top: 0 !important; }
+#mobile-menu-button.menu-open #hamburger-icon span:nth-child(1),
+#mobile-menu-button.menu-open #hamburger-icon span:nth-child(3) {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform-origin: center;
+}
+#mobile-menu-button.menu-open #hamburger-icon span:nth-child(1) {
+  transform: translateY(-50%) rotate(45deg);
+}
+#mobile-menu-button.menu-open #hamburger-icon span:nth-child(2) {
+  opacity: 0;
+}
+#mobile-menu-button.menu-open #hamburger-icon span:nth-child(3) {
+  transform: translateY(-50%) rotate(-45deg);
+}
+
+/* モバイルメニューの背景 */
+#mobile-menu {
+  background: transparent; /* 背面を透過させて backdrop-filter が背後コンテンツに効くようにする */
+  top: var(--header-height) !important;
+}
+
+/* モバイルメニューのオーバーレイ（位置とアニメーション込み） */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.mobile-menu-overlay {
+  position: fixed;
+  top: var(--header-height);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(100vh - var(--header-height));
+  /* 透過色のみ（ブラーは下層に適用して確実に可視化） */
+  background: rgba(0, 0, 0, 0.35);
+  /* 背景側を直接ブラー（コンテンツを消さずに視認性を保つ） */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: fade-in 0.2s ease-out;
+}
+
+/* メニュー開時の本体フィルターは無効化し、オーバーレイの backdrop-filter に委譲 */
+/* 既存の視覚的トランジションを維持したい場合は必要に応じて復帰可能 */
+
+/* モバイルメニューのコンテンツ */
+#mobile-menu-content {
+  background: var(--header-bg);
+  border-left: 1px solid var(--header-border);
+  top: var(--header-height) !important;
+  max-height: calc(100vh - var(--header-height));
+  overflow-y: auto;
+  overflow-x: hidden;
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+}
+
+#mobile-menu-content.menu-open {
+  transform: translateX(0);
+}
+
+/* モバイルメニューのリンク */
+.menu-link {
+  color: var(--header-text);
+  border-bottom: 1px solid var(--header-border);
+  transition: all 0.3s ease;
+}
+
+.menu-link:hover {
+  background: var(--accent-bg);
+  color: var(--accent-color);
+}
+
+/* モバイルメニュー内のテキスト処理 */
+#mobile-menu .menu-text {
+  word-break: break-word;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+/* モバイルメニュー内のリンク効果を強化 */
+#mobile-menu .menu-link {
+  transition: all 0.2s ease;
+  overflow: hidden;
+  word-wrap: break-word;
+}
+
+#mobile-menu .menu-link:hover {
+  transform: translateX(4px);
+  background: var(--accent-bg);
+}
+
+/* モバイルメニューのスクロールバー */
+#mobile-menu .overflow-y-auto::-webkit-scrollbar {
+  width: 4px;
+}
+
+#mobile-menu .overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#mobile-menu .overflow-y-auto::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 2px;
+}
+
+#mobile-menu .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* メニューアイコンのスタイル */
+.menu-icon {
+  color: var(--hamburger-line);
+}
+
+.menu-text {
+  color: var(--header-text);
+}
+
+/* テーマ切り替えボタンのアイコン */
+.theme-icon {
+  color: var(--hamburger-line);
+}
+
+/* ハンバーガーボタンの状態管理 */
+#mobile-menu-button.menu-open { background: transparent; }
+#mobile-menu-button.menu-open:hover { background: var(--accent-bg); }
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .glass-effect-header {
+    padding: 0.75rem 1rem;
+  }
+  
+  #mobile-menu-content {
+    width: 280px;
+  }
+  /* モバイル時のメニュー文字サイズを拡大 */
+  #mobile-menu .menu-text {
+    font-size: 1.25rem; /* 20px */
+    line-height: 1.75rem;
+  }
+  /* モバイル時のメニューアイコンサイズを拡大 */
+  #mobile-menu .menu-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+  #mobile-menu .theme-icon {
+    font-size: 1.5rem;
+    line-height: 1.5rem;
+  }
+}
+
+@media (min-width: 769px) {
+  .glass-effect-header {
+    padding: 1rem 1.5rem;
+  }
+  
+  #mobile-menu-content {
+    width: 320px;
+  }
+}
+
+/* デスクトップ時のモバイルメニュー内の文字サイズ調整 */
+@media (min-width: 768px) {
+  #mobile-menu .menu-text {
+    font-size: 1.25rem; /* 20px に拡大 */
+    line-height: 1.75rem;
+  }
+  #mobile-menu .mobile-menu-header h3 {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+  #mobile-menu .menu-icon {
+    width: 1.75rem; /* 約28px に拡大 */
+    height: 1.75rem;
+  }
+  #mobile-menu .theme-icon {
+    font-size: 1.75rem; /* 約28px */
+    line-height: 1.75rem;
+  }
+  #mobile-menu .menu-link {
+    padding: 0.75rem 1rem;
+  }
+  #mobile-menu .mobile-menu-content {
+    width: 20rem;
+  }
+}
+
+/* 通知は常に最前面に表示 */
+#notification-container,
+#copy-notification {
+  position: fixed;
+  z-index: 2147483647 !important; /* 32bit上限相当で他要素より常に上 */
+}
+
+#notification-container .notification {
+  position: relative;
+  z-index: 2147483647 !important;
+}

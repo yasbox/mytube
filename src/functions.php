@@ -1,0 +1,382 @@
+<?php
+/**
+ * 共通関数（後方互換性のため）
+ * 新しいシステムを使用し、既存の関数も提供
+ */
+
+// PHPのログ出力先設定はphp.iniに委譲
+
+// 互換レイヤーは不要化。BootstrapでConfigを初期化済み。
+
+// 新しい設定システムを読み込み
+require_once 'core/utils/Functions.php';
+
+// 既存の関数を新しいクラスメソッドとして提供
+function getVideoMetadata($basename) {
+    return Functions::getVideoMetadata($basename);
+}
+
+function saveVideoMetadata($basename, $data) {
+    return Functions::saveVideoMetadata($basename, $data);
+}
+
+function getVideoFiles() {
+    return Functions::getVideoFiles();
+}
+
+function getSortedVideos($sort = 'new') {
+    return Functions::getSortedVideos($sort);
+}
+
+function getVideoStats() {
+    return Functions::getVideoStats();
+}
+
+function deleteVideo($videoFile) {
+    return Functions::deleteVideo($videoFile);
+}
+
+function updateVideoMetadata($videoFile, $title, $comment) {
+    return Functions::updateVideoMetadata($videoFile, $title, $comment);
+}
+
+function formatFileSize($bytes) {
+    return Functions::formatFileSize($bytes);
+}
+
+function getAdminVideoList() {
+    return Functions::getAdminVideoList();
+}
+
+function getAdminVideoListSorted($sort = 'new') {
+    return Functions::getAdminVideoListSorted($sort);
+}
+
+function getAdminVideoListPaginated($sort = 'new', $page = 1, $perPage = 10) {
+    return Functions::getAdminVideoListPaginated($sort, $page, $perPage);
+}
+
+// 認証関連の関数（admin_functions.phpから移動）
+function secureSession() {
+    // セッションが既に開始されている場合は設定を変更しない
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        return;
+    }
+    
+    // セッション設定
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.use_only_cookies', 1);
+    ini_set('session.cookie_secure', isset($_SERVER['HTTPS']));
+    
+    // セッション開始
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+}
+
+function requireAuthentication() {
+    if (!isUserAuthenticated()) {
+        // リメンバーミーで復元を試みる（セキュリティモジュール読み込み済みの場合）
+        if (function_exists('checkRememberMe')) {
+            checkRememberMe();
+            if (isUserAuthenticated()) {
+                return;
+            }
+        }
+        // 現在のURLをセッションに保存（ログイン後に戻るため）
+        $currentUrl = $_SERVER['REQUEST_URI'] ?? '/';
+        
+        // APIリクエストの場合はリダイレクト先を保存しない
+        if (isset($_GET['action']) || isset($_POST['action']) || 
+            strpos($currentUrl, 'action=') !== false || 
+            strpos($currentUrl, 'api') !== false) {
+            // 出力バッファをクリアしてリダイレクト
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+            header('Location: login.php');
+            exit;
+        }
+        
+        // 実際のページアクセスの場合のみリダイレクト先を保存
+        // 動画視聴ページ（v=パラメータ）やトップページの場合
+        if (isset($_GET['v']) || 
+            $currentUrl === '/' || 
+            $currentUrl === '/index.php' || 
+            strpos($currentUrl, 'index.php') !== false) {
+            
+            // URLが安全な場合のみ保存
+            if (isSafeRedirectUrl($currentUrl)) {
+                $_SESSION['redirect_after_login'] = $currentUrl;
+            }
+        }
+        
+        // 出力バッファをクリアしてリダイレクト
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+        
+        // ログインページにリダイレクト
+        header('Location: login.php');
+        exit;
+    }
+}
+
+function isPasswordProtectionEnabled(): bool {
+    // JSON（src/data/settings.json）を最優先
+    if (method_exists('Config', 'getSettingsJsonPath')) {
+        $path = Config::getSettingsJsonPath();
+        if (!is_file($path) || !is_readable($path)) {
+            // 設定が無い場合は保護OFF（公開）
+            return false;
+        }
+        $raw = file_get_contents($path);
+        if ($raw !== false) {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded) && isset($decoded['security']['password_protection'])) {
+                return filter_var($decoded['security']['password_protection'], FILTER_VALIDATE_BOOLEAN);
+            }
+        }
+    }
+    // ランタイム設定から取得（新キー優先、旧キーは反転）
+    if (Config::has('security.password_protection')) {
+        return filter_var(Config::get('security.password_protection'), FILTER_VALIDATE_BOOLEAN);
+    }
+    return false;
+}
+
+function requireViewerAccess(): void {
+    $protected = isPasswordProtectionEnabled();
+    if ($protected && !isUserAuthenticated()) {
+        requireAuthentication();
+    }
+}
+
+function isUserAuthenticated() {
+    $authenticated = isset($_SESSION['user_authenticated']) && $_SESSION['user_authenticated'] === true;
+    
+    // セッションタイムアウトチェック
+    if ($authenticated && isset($_SESSION['user_login_time'])) {
+        $sessionAge = time() - $_SESSION['user_login_time'];
+        $adminSessionLifetime = (int)Config::get('security.admin_session_lifetime', 30 * 24 * 3600);
+        if ($sessionAge > $adminSessionLifetime) {
+            // セッションが期限切れ
+            userLogout();
+            $authenticated = false;
+        }
+    }
+    
+    return $authenticated;
+}
+
+function userLogout() {
+    unset($_SESSION['user_authenticated']);
+    unset($_SESSION['user_role']);
+    unset($_SESSION['user_login_time']);
+    unset($_SESSION['user_ip']);
+    unset($_SESSION['csrf_token']);
+    
+    // リメンバーミークッキーを削除
+    clearRememberMeCookie();
+    
+    session_destroy();
+}
+
+function isSafeRedirectUrl($url) {
+    // 相対URLのみ許可
+    if (strpos($url, 'http://') === 0 || strpos($url, 'https://') === 0) {
+        return false;
+    }
+    
+    // 危険なパスを除外
+    $dangerousPaths = ['../', '..\\', 'php://', 'data://', 'file://'];
+    foreach ($dangerousPaths as $dangerousPath) {
+        if (strpos($url, $dangerousPath) !== false) {
+            return false;
+        }
+    }
+    
+    // クエリパラメータを除去してパス部分のみをチェック
+    $pathOnly = parse_url($url, PHP_URL_PATH);
+    if ($pathOnly === null) {
+        $pathOnly = $url;
+    }
+    
+    // 許可されたファイル拡張子のみ（パス部分のみチェック）
+    $allowedExtensions = ['php', 'html', 'htm'];
+    $pathInfo = pathinfo($pathOnly);
+    if (isset($pathInfo['extension']) && !in_array(strtolower($pathInfo['extension']), $allowedExtensions)) {
+        return false;
+    }
+    
+    return true;
+}
+
+function clearRememberMeCookie() {
+    $cookieName = Config::get('security.remember_me_cookie_name', 'MyTube_remember');
+    if (isset($_COOKIE[$cookieName])) {
+        // Cookie属性をログイン時と合わせて確実に削除
+        $secure = isset($_SERVER['HTTPS']);
+        $httponly = true;
+        $samesite = 'Lax';
+        setcookie(
+            $cookieName,
+            '',
+            [
+                'expires' => time() - 3600,
+                'path' => '/',
+                'domain' => '',
+                'secure' => $secure,
+                'httponly' => $httponly,
+                'samesite' => $samesite
+            ]
+        );
+        unset($_COOKIE[$cookieName]);
+    }
+}
+
+// フォーマット関連の関数
+function formatDuration($duration) {
+    // 旧実装やメタデータが文字列のままでも安全に処理できるように秒へ正規化
+    $seconds = null;
+    if (is_int($duration)) {
+        $seconds = $duration;
+    } elseif (is_string($duration)) {
+        $trimmed = trim($duration);
+        if ($trimmed !== '' && ctype_digit($trimmed)) {
+            $seconds = (int)$trimmed;
+        } elseif (strpos($trimmed, ':') !== false) {
+            $parts = explode(':', $trimmed);
+            if (count($parts) === 3) {
+                $seconds = ((int)$parts[0]) * 3600 + ((int)$parts[1]) * 60 + (int)$parts[2];
+            } elseif (count($parts) === 2) {
+                $seconds = ((int)$parts[0]) * 60 + (int)$parts[1];
+            }
+        }
+    }
+    return Functions::formatDuration($seconds);
+}
+
+function formatDate($dateString) {
+    return Functions::formatDate($dateString);
+}
+
+/**
+ * ワンタイムパスワードを生成する
+ * @return string 生成されたパスワード
+ */
+function generateOneTimePassword() {
+    // 16文字のランダムな文字列を生成（UUID風だが短縮版）
+    $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    $password = '';
+    for ($i = 0; $i < 16; $i++) {
+        $password .= $chars[random_int(0, strlen($chars) - 1)];
+    }
+    return $password;
+}
+
+/**
+ * 動画のワンタイムパスワードを取得または生成する
+ * @param string $videoBasename 動画のベース名（拡張子なし）
+ * @return array パスワード情報
+ */
+function getOrGenerateVideoPassword($videoBasename) {
+    $metadata = getVideoMetadata($videoBasename);
+    $currentTime = time();
+    $oneDayInSeconds = 24 * 60 * 60;
+    
+    // 既存のパスワードがあるかチェック
+    if (isset($metadata['share_password']) && isset($metadata['share_password_expires'])) {
+        $expires = strtotime($metadata['share_password_expires']);
+        
+        // 期限が切れていない場合は既存のパスワードを返す
+        if ($expires > $currentTime) {
+            return [
+                'password' => $metadata['share_password'],
+                'expires' => $metadata['share_password_expires'],
+                'is_new' => false
+            ];
+        }
+    }
+    
+    // 新しいパスワードを生成
+    $newPassword = generateOneTimePassword();
+    $expiresTime = date('Y-m-d H:i:s', $currentTime + $oneDayInSeconds);
+    
+    // メタデータを更新
+    $metadata['share_password'] = $newPassword;
+    $metadata['share_password_expires'] = $expiresTime;
+    $metadata['share_password_created'] = date('Y-m-d H:i:s', $currentTime);
+    
+    // JSONファイルを更新
+    $jsonFile = __DIR__ . "/videos/{$videoBasename}.json";
+    if (file_put_contents($jsonFile, json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))) {
+        return [
+            'password' => $newPassword,
+            'expires' => $expiresTime,
+            'is_new' => true
+        ];
+    }
+    
+    return false;
+}
+
+/**
+ * ワンタイムパスワードを検証する
+ * @param string $videoBasename 動画のベース名（拡張子なし）
+ * @param string $password 検証するパスワード
+ * @return bool 有効なパスワードかどうか
+ */
+function validateVideoPassword($videoBasename, $password) {
+    $metadata = getVideoMetadata($videoBasename);
+    
+    if (!isset($metadata['share_password']) || !isset($metadata['share_password_expires'])) {
+        return false;
+    }
+    
+    // パスワードが一致するかチェック
+    if ($metadata['share_password'] !== $password) {
+        return false;
+    }
+    
+    // 期限が切れていないかチェック
+    $expires = strtotime($metadata['share_password_expires']);
+    $currentTime = time();
+    
+    return $expires > $currentTime;
+}
+
+/**
+ * 共有リンクを生成する
+ * @param string $videoBasename 動画のベース名（拡張子なし）
+ * @return string 共有リンク
+ */
+function generateShareLink($videoBasename) {
+    $passwordInfo = getOrGenerateVideoPassword($videoBasename);
+    
+    if (!$passwordInfo) {
+        return false;
+    }
+    
+    // 現在のリクエストのURIではなく、index.phpへの直接的なリンクを生成
+    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? "https" : "http";
+    $host = $_SERVER['HTTP_HOST'];
+    
+    // index.phpへの直接的なリンクを生成
+    return $protocol . "://" . $host . "/index.php?v=" . urlencode($videoBasename . '.mp4') . "&share=" . $passwordInfo['password'];
+}
+
+/**
+ * 通常の共有リンクを生成する（ワンタイムパスワードなし）
+ * @param string $videoBasename 動画のベース名（拡張子なし）
+ * @return string 共有リンク
+ */
+function generateNormalShareLink($videoBasename) {
+    // 現在のリクエストのURIではなく、index.phpへの直接的なリンクを生成
+    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? "https" : "http";
+    $host = $_SERVER['HTTP_HOST'];
+    
+    // index.phpへの直接的なリンクを生成（ワンタイムパスワードなし）
+    // shareパラメータは含めない（通常の動画視聴と同じ）
+    return $protocol . "://" . $host . "/index.php?v=" . urlencode($videoBasename . '.mp4');
+}

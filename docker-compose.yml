@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/var/www/html
+      - ./php.ini:/usr/local/etc/php/php.ini
+    working_dir: /var/www/html
+    networks:
+      - MyTube-network
+    restart: unless-stopped
+
+networks:
+  MyTube-network:
+    driver: bridge

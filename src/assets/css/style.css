@@ -1,0 +1,455 @@
+/* MyTube 共通スタイルシート */
+/* テーマ変数は theme.css で管理 */
+
+/* ベース */
+html, body {
+  height: 100%;
+}
+
+body {
+  background: var(--primary-bg);
+  color: var(--text-primary);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Headings: global typography scale */
+body h1 { font-size: var(--h1-sm); line-height: 1.25; margin: 0 0 0.75em; }
+body h2 { font-size: var(--h2-sm); line-height: 1.3;  margin: 0 0 0.75em; }
+body h3 { font-size: var(--h3-sm); line-height: 1.35; margin: 0 0 0.75em; }
+body h4 { font-size: var(--h4-sm); line-height: 1.4;  margin: 0 0 0.5em; }
+body h5 { font-size: var(--h5-sm); line-height: 1.45; margin: 0 0 0.5em; }
+body h6 { font-size: var(--h6-sm); line-height: 1.5;  margin: 0 0 0.5em; }
+
+@media (min-width: 768px) {
+  body h1 { font-size: var(--h1-md); }
+  body h2 { font-size: var(--h2-md); }
+  body h3 { font-size: var(--h3-md); }
+  body h4 { font-size: var(--h4-md); }
+  body h5 { font-size: var(--h5-md); }
+  body h6 { font-size: var(--h6-md); }
+}
+
+/* 共通のガラス効果 */
+.glass-effect {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(8px);
+}
+
+.glass-effect-card {
+  backdrop-filter: blur(8px);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow);
+}
+
+/* 共通のグラデーション背景 */
+.gradient-bg {
+  background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 50%, var(--accent-bg) 100%);
+}
+
+/* 共通のカードホバー効果 */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+.card-hover:hover {
+  transform: translateY(-2px) translateZ(0);
+  box-shadow: var(--shadow), 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* 共通のユーティリティクラス */
+.optimize-rendering {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+.lazy-image {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.lazy-image.loaded {
+  opacity: 1;
+}
+
+/* ソートボタン */
+#sort-new-btn,
+#sort-popular-btn,
+#sort-views-btn,
+#sort-likes-btn {
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  padding: 0.375rem 0.5rem; /* レイアウトのズレを防ぐため常時パディングを付与 */
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 0.5rem;
+}
+
+#sort-new-btn:hover,
+#sort-popular-btn:hover,
+#sort-views-btn:hover,
+#sort-likes-btn:hover {
+  color: var(--text-primary);
+  opacity: 0.8;
+}
+
+#sort-new-btn.active,
+#sort-popular-btn.active,
+#sort-views-btn.active,
+#sort-likes-btn.active {
+  color: var(--text-primary);
+  font-weight: 600;
+  position: relative;
+}
+
+#sort-new-btn.active::after,
+#sort-popular-btn.active::after,
+#sort-views-btn.active::after,
+#sort-likes-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(to right, #3b82f6, #2563eb);
+  border-radius: 1px;
+}
+
+/* 極小幅デバイス（~360px/350px想定）の最適化 */
+@media (max-width: 360px) {
+  /* 並び替えボタン行：詰めて折返し許可 */
+  .sort-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  /* space-x-* のマージンを小さく上書き */
+  .sort-actions > * + * {
+    margin-left: 0.375rem !important; /* 6px 相当 */
+  }
+  /* ボタンのフォントとパディングを縮小 */
+  #sort-new-btn,
+  #sort-popular-btn,
+  #sort-views-btn,
+  #sort-likes-btn {
+    font-size: 0.8125rem; /* 13px */
+    padding: 0.25rem 0.375rem; /* 4px 6px */
+    line-height: 1.2;
+    white-space: nowrap; /* ボタン内改行を防止 */
+  }
+  /* アイコンのサイズと余白を縮小 */
+  .sort-actions svg {
+    width: 14px;
+    height: 14px;
+    margin-right: 0.25rem !important; /* 4px */
+    flex-shrink: 0;
+  }
+  /* アクティブ下線の位置を詰める */
+  #sort-new-btn.active::after,
+  #sort-popular-btn.active::after,
+  #sort-views-btn.active::after,
+  #sort-likes-btn.active::after {
+    bottom: -2px;
+  }
+}
+
+@media (max-width: 350px) {
+  /* さらにキツい幅ではより圧縮 */
+  .sort-actions > * + * {
+    margin-left: 0.25rem !important; /* 4px */
+  }
+  #sort-new-btn,
+  #sort-popular-btn,
+  #sort-views-btn,
+  #sort-likes-btn {
+    font-size: 0.75rem; /* 12px */
+    padding: 0.1875rem 0.3125rem; /* 3px 5px */
+  }
+  .sort-actions svg {
+    width: 12px;
+    height: 12px;
+    margin-right: 0.1875rem !important; /* 3px */
+  }
+}
+
+/* メニューバーのテキストベースリンクスタイル */
+.menu-link {
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border-radius: 0.5rem;
+  margin: 0 0.25rem;
+}
+
+.menu-link:hover {
+  color: var(--text-primary);
+  background: var(--accent-bg);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.menu-link:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.menu-link.active {
+  color: var(--text-primary);
+  font-weight: 700;
+  position: relative;
+  background: var(--accent-bg);
+}
+
+.menu-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(to right, #3b82f6, #2563eb);
+  border-radius: 1px;
+}
+
+/* メニューバーのアイコンスタイル */
+.menu-icon {
+  color: var(--text-secondary);
+  transition: color 0.3s ease, transform 0.3s ease;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+  font-size: 1.1em;
+}
+
+.menu-link:hover .menu-icon {
+  color: var(--text-primary);
+  transform: scale(1.1);
+}
+
+/* メニューバーのテキストスタイル */
+.menu-text {
+  color: inherit;
+  transition: color 0.3s ease;
+  font-weight: inherit;
+}
+
+/* 共通のスクロールバー */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: var(--secondary-bg);
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 3px;
+  transition: background 0.3s ease;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-muted) var(--secondary-bg);
+}
+
+
+
+/* 共通のテキスト省略 */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.break-words {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* 共通のアニメーション */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.animate-pulse-slow {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 共通のスクロール最適化 */
+.scroll-optimized {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+/* 共通のアスペクト比 */
+.aspect-16-9 {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-bottom: 56.25%; /* 16:9 */
+}
+
+.aspect-16-9 > img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* タッチデバイス対応 */
+@media (hover: none) {
+  .card-hover:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  
+  .card-hover:active {
+    transform: translateY(-1px) translateZ(0);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .group:hover .group-hover\:scale-110 {
+    transform: none;
+  }
+  
+  .group:active .group-hover\:scale-110 {
+    transform: scale(1.05);
+  }
+}
+
+/* ログインページ専用スタイル */
+.login-input {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--card-border) !important;
+  color: var(--text-primary) !important;
+  transition: all 0.3s ease;
+}
+
+.login-input:focus {
+  outline: none !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+}
+
+.login-input::placeholder {
+  color: var(--text-muted) !important;
+}
+
+.login-input:focus::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 0.7;
+}
+
+/* 共通テキスト/背景ユーティリティ（全ページで利用） */
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.bg-accent { background: var(--accent-bg); }
+.bg-secondary { background: var(--text-secondary); }
+
+/* ログインページ：パスワードマスク */
+.password-masked {
+  -webkit-text-security: disc;
+}
+
+/* 削除したdark:プレフィックス付きクラスの色を維持するためのスタイル */
+.bg-blue-100 {
+  background-color: var(--blue-100);
+}
+
+.text-blue-600 {
+  color: var(--blue-600);
+}
+
+.bg-blue-900\/20 {
+  background-color: var(--blue-900-20);
+}
+
+.text-gray-300 {
+  color: var(--gray-300);
+}
+
+.text-gray-400 {
+  color: var(--gray-400);
+}
+
+.text-gray-500 {
+  color: var(--gray-500);
+}
+
+.text-gray-600 {
+  color: var(--gray-600);
+}
+
+.bg-gray-900 {
+  background-color: var(--gray-900);
+}
+
+.hover\:bg-gray-800:hover {
+  background-color: var(--gray-800);
+} 

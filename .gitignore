@@ -1,0 +1,43 @@
+# 環境変数ファイル（セキュリティ上重要）
+.env
+src/.env
+*.env
+
+# ログファイル
+*.log
+src/debug.log
+
+# 一時ファイル・アップロードファイル
+tmp/
+temp/
+src/temp_uploads/*
+!src/temp_uploads/.gitkeep
+
+# アップロードされたファイル
+src/videos/*
+src/thumbnails/*
+!src/videos/.gitkeep
+!src/thumbnails/.gitkeep
+
+# データファイル（ユーザー生成コンテンツ）
+src/data/*
+!src/data/.gitkeep
+
+# IDE設定
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS生成ファイル
+.DS_Store
+Thumbs.db
+
+# Docker関連
+.dockerignore
+
+# セッションファイル
+sessions/
+
+# キャッシュファイル
+*.cache

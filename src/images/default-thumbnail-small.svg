@@ -1,0 +1,51 @@
+<svg width="128" height="80" viewBox="0 0 128 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景 -->
+  <rect width="128" height="80" fill="#374151"/>
+  
+  <!-- グラデーション背景 -->
+  <defs>
+    <linearGradient id="bgGradientSmall" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1f2937;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#111827;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- 背景グラデーション -->
+  <rect width="128" height="80" fill="url(#bgGradientSmall)"/>
+  
+  <!-- 動画アイコン -->
+  <g transform="translate(44, 20)">
+    <!-- プレイボタンの円形背景 -->
+    <circle cx="20" cy="20" r="18" fill="#3b82f6" opacity="0.9"/>
+    
+    <!-- プレイボタン -->
+    <polygon points="15,12 15,28 28,20" fill="white"/>
+    
+    <!-- 動画カメラアイコン -->
+    <g transform="translate(5, 5)" opacity="0.8">
+      <!-- カメラ本体 -->
+      <rect x="0" y="4" width="10" height="7" rx="1" fill="#6b7280"/>
+      <!-- レンズ -->
+      <circle cx="5" cy="7.5" r="2" fill="#374151"/>
+      <circle cx="5" cy="7.5" r="1" fill="#1f2937"/>
+      <!-- フラッシュ -->
+      <rect x="9" y="3" width="1.5" height="1.5" rx="0.5" fill="#fbbf24"/>
+    </g>
+  </g>
+  
+  <!-- テキスト -->
+  <text x="64" y="65" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#9ca3af">
+    サムネイルなし
+  </text>
+  
+  <!-- 装飾的な要素 -->
+  <g opacity="0.3">
+    <!-- 左上の装飾 -->
+    <circle cx="8" cy="8" r="1" fill="#3b82f6"/>
+    <circle cx="12" cy="6" r="0.8" fill="#8b5cf6"/>
+    
+    <!-- 右下の装飾 -->
+    <circle cx="120" cy="72" r="1" fill="#3b82f6"/>
+    <circle cx="116" cy="74" r="0.8" fill="#8b5cf6"/>
+  </g>
+</svg> 
