@@ -198,6 +198,55 @@ $isAdminPage = false;
             </div>
           </button>
         </form>
+
+        <!-- 復旧端末（自動登録済み端末のみ表示） -->
+        <?php
+          $recoveryCookie = $_COOKIE['MyTube_recovery_device'] ?? '';
+          $hasRecovery = false;
+          if (is_string($recoveryCookie) && $recoveryCookie !== '') {
+            $path = Config::getRecoveryDevicesPath();
+            if (is_readable($path)) {
+              $raw = @file_get_contents($path);
+              $data = $raw !== false ? json_decode($raw, true) : null;
+              if (is_array($data) && isset($data['tokens']) && is_array($data['tokens'])) {
+                $hash = hash('sha256', $recoveryCookie);
+                foreach ($data['tokens'] as $entry) {
+                  if (($entry['hash'] ?? '') === $hash) { $hasRecovery = true; break; }
+                }
+              }
+            }
+          }
+        ?>
+        <?php if ($hasRecovery && !filter_var(($_ENV['RECOVERY_DEVICE_DISABLED'] ?? $_SERVER['RECOVERY_DEVICE_DISABLED'] ?? getenv('RECOVERY_DEVICE_DISABLED') ?: 'false'), FILTER_VALIDATE_BOOLEAN)): ?>
+        <?php if (!empty($_SESSION['flash_success']) || !empty($_SESSION['flash_error'])): ?>
+          <div class="mt-4">
+            <?php if (!empty($_SESSION['flash_success'])): ?>
+              <div class="rounded-lg p-3 mb-3 text-white font-medium" style="background-color:#16a34a;">
+                <?php echo htmlspecialchars($_SESSION['flash_success']); ?>
+              </div>
+            <?php unset($_SESSION['flash_success']); endif; ?>
+            <?php if (!empty($_SESSION['flash_error'])): ?>
+              <div class="rounded-lg p-3 text-white font-medium" style="background-color:#dc2626;">
+                <?php echo htmlspecialchars($_SESSION['flash_error']); ?>
+              </div>
+            <?php unset($_SESSION['flash_error']); endif; ?>
+          </div>
+        <?php endif; ?>
+        <div class="mt-6 md:mt-8 text-left">
+          <details>
+            <summary class="cursor-pointer text-sm md:text-base underline">管理者パスワードを再設定</summary>
+            <div class="mt-3 p-3 rounded-lg" style="background: var(--card-bg); border: 1px solid var(--card-border);">
+              <form method="POST" action="recovery_device.php" class="space-y-3">
+                <div>
+                  <label class="block text-sm mb-1">新しいパスワード（8文字以上）</label>
+                  <input type="password" name="new_password" class="w-full px-4 py-2 rounded-lg login-input" required>
+                </div>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">再設定</button>
+              </form>
+            </div>
+          </details>
+        </div>
+        <?php endif; ?>
         
         
         <!-- セキュリティ情報 -->

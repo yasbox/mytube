@@ -38,12 +38,148 @@
     var uploadedSize = document.getElementById('uploaded-size');
     var remainingTime = document.getElementById('remaining-time');
     var cancelUpload = document.getElementById('cancel-upload');
+    var dropArea = document.getElementById('drop-area');
+    var pageDropOverlay = null;
+    var dragCounter = 0;
 
     if (!videoInput || !uploadForm) {
       return;
     }
 
+    var droppedFile = null;
+
     // Events
+    // Drag & Drop support (use only the first file)
+    // Prevent default browser behavior when dropping files outside target
+    ['dragover', 'drop'].forEach(function(evtName){
+      document.addEventListener(evtName, function(e){
+        var dt = e.dataTransfer;
+        if (dt && dt.types && (dt.types.indexOf ? dt.types.indexOf('Files') !== -1 : dt.types.contains && dt.types.contains('Files'))) {
+          e.preventDefault();
+        }
+      });
+    });
+
+    function hasFilesInDataTransfer(e){
+      var dt = e && e.dataTransfer;
+      if (!dt || !dt.types) return false;
+      if (typeof dt.types.indexOf === 'function') return dt.types.indexOf('Files') !== -1;
+      if (typeof dt.types.contains === 'function') return dt.types.contains('Files');
+      return false;
+    }
+
+    function ensurePageOverlay(){
+      if (pageDropOverlay) return pageDropOverlay;
+      pageDropOverlay = document.createElement('div');
+      pageDropOverlay.id = 'page-drop-overlay';
+      pageDropOverlay.className = 'hidden';
+      pageDropOverlay.innerHTML = '\n        <div class="page-drop-overlay__inner">\n          <div class="page-drop-overlay__icon" aria-hidden="true">⬆</div>\n          <div class="page-drop-overlay__text">ここに動画をドロップ</div>\n          <div class="page-drop-overlay__sub">複数選択された場合は先頭の1ファイルのみアップロードします</div>\n        </div>\n      ';
+      document.body.appendChild(pageDropOverlay);
+      return pageDropOverlay;
+    }
+
+    function showPageOverlay(){
+      ensurePageOverlay();
+      pageDropOverlay.classList.remove('hidden');
+    }
+
+    function hidePageOverlay(){
+      if (pageDropOverlay) pageDropOverlay.classList.add('hidden');
+    }
+
+    // Document-level handlers for full-page drop
+    document.addEventListener('dragenter', function(e){
+      if (!hasFilesInDataTransfer(e)) return;
+      dragCounter++;
+      showPageOverlay();
+    });
+    document.addEventListener('dragleave', function(e){
+      if (!hasFilesInDataTransfer(e)) return;
+      dragCounter = Math.max(0, dragCounter - 1);
+      if (dragCounter === 0) hidePageOverlay();
+    });
+    document.addEventListener('dragover', function(e){
+      if (!hasFilesInDataTransfer(e)) return;
+      e.preventDefault();
+      showPageOverlay();
+    });
+    document.addEventListener('drop', function(e){
+      if (!hasFilesInDataTransfer(e)) return;
+      e.preventDefault();
+      dragCounter = 0;
+      hidePageOverlay();
+      var files = (e.dataTransfer && e.dataTransfer.files) ? e.dataTransfer.files : null;
+      if (!files || files.length === 0) return;
+      var file = files[0];
+      if (maxUploadBytes > 0 && file.size > maxUploadBytes) {
+        if (typeof window.showNotification === 'function') {
+          window.showNotification('選択されたファイルは最大アップロードサイズを超えています。最大: ' + formatFileSize(maxUploadBytes) + ' / 選択: ' + formatFileSize(file.size), 'error');
+        } else {
+          alert('選択されたファイルは最大アップロードサイズを超えています。\n最大: ' + formatFileSize(maxUploadBytes) + ' / 選択: ' + formatFileSize(file.size));
+        }
+        return;
+      }
+      try {
+        var dt = new DataTransfer();
+        dt.items.add(file);
+        videoInput.files = dt.files;
+        var changeEvent = new Event('change');
+        videoInput.dispatchEvent(changeEvent);
+      } catch (_) {
+        droppedFile = file;
+        if (fileName) {
+          fileName.textContent = file.name;
+          fileName.classList.remove('hidden');
+        }
+        showVideoPreview(file);
+      }
+    });
+
+    if (dropArea) {
+      ['dragenter', 'dragover'].forEach(function(evtName){
+        dropArea.addEventListener(evtName, function(e){
+          e.preventDefault();
+          e.stopPropagation();
+          dropArea.classList.add('drag-over');
+        });
+      });
+      ['dragleave', 'dragend', 'drop'].forEach(function(evtName){
+        dropArea.addEventListener(evtName, function(e){
+          e.preventDefault();
+          e.stopPropagation();
+          dropArea.classList.remove('drag-over');
+        });
+      });
+      dropArea.addEventListener('drop', function(e){
+        var files = (e.dataTransfer && e.dataTransfer.files) ? e.dataTransfer.files : null;
+        if (!files || files.length === 0) return;
+        var file = files[0];
+        // size pre-check
+        if (maxUploadBytes > 0 && file.size > maxUploadBytes) {
+          if (typeof window.showNotification === 'function') {
+            window.showNotification('選択されたファイルは最大アップロードサイズを超えています。最大: ' + formatFileSize(maxUploadBytes) + ' / 選択: ' + formatFileSize(file.size), 'error');
+          } else {
+            alert('選択されたファイルは最大アップロードサイズを超えています。\n最大: ' + formatFileSize(maxUploadBytes) + ' / 選択: ' + formatFileSize(file.size));
+          }
+          return;
+        }
+        try {
+          var dt = new DataTransfer();
+          dt.items.add(file);
+          videoInput.files = dt.files;
+          var changeEvent = new Event('change');
+          videoInput.dispatchEvent(changeEvent);
+        } catch (_) {
+          // Fallback: just preview without binding to input
+          droppedFile = file;
+          if (fileName) {
+            fileName.textContent = file.name;
+            fileName.classList.remove('hidden');
+          }
+          showVideoPreview(file);
+        }
+      });
+    }
     videoInput.addEventListener('change', function(e) {
       var file = e.target.files[0];
       if (file) {
@@ -71,7 +207,7 @@
 
     uploadForm.addEventListener('submit', function(e) {
       e.preventDefault();
-      var file = videoInput.files[0];
+      var file = videoInput.files[0] || droppedFile;
       if (!file) {
         if (typeof window.showNotification === 'function') {
           window.showNotification('ファイルを選択してください', 'error');
@@ -81,6 +217,7 @@
         return;
       }
       startUpload(file);
+      droppedFile = null;
     });
 
     if (cancelUpload) {

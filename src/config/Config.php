@@ -233,6 +233,22 @@ class Config
             // 設定をマージ（既存の値を確実に上書き）
             self::$config = self::arrayMergeRecursive(self::$config, $data);
             }
+
+        // 追加: 管理者パスワードのセキュア保存ファイルを読み込み（環境変数より低優先）
+        $securePwPath = self::getSecureAdminPasswordPath();
+        if (is_readable($securePwPath)) {
+            $raw = @file_get_contents($securePwPath);
+            if ($raw !== false) {
+                $pwData = json_decode($raw, true);
+                if (is_array($pwData) && isset($pwData['password']) && is_string($pwData['password'])) {
+                    if (!isset(self::$config['security']) || !is_array(self::$config['security'])) {
+                        self::$config['security'] = [];
+                    }
+                    // ここで設定した値は後続の環境変数上書きでさらに上書きされうる
+                    self::$config['security']['admin_password'] = (string)$pwData['password'];
+                }
+            }
+        }
     }
 
     /**
@@ -354,6 +370,42 @@ class Config
     {
         // src ディレクトリ配下の data/ に配置（直アクセスは .htaccess で遮断）
         return dirname(__DIR__) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'settings.json';
+    }
+
+    /**
+     * 管理者パスワード保存先（Web直配信外）
+     */
+    public static function getSecureAdminPasswordPath(): string
+    {
+        $dir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'secure';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        return $dir . DIRECTORY_SEPARATOR . 'admin_password.json';
+    }
+
+    /**
+     * 管理者リカバリーコード保存先
+     */
+    public static function getAdminRecoveryCodesPath(): string
+    {
+        $dir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'secure';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        return $dir . DIRECTORY_SEPARATOR . 'admin_recovery.json';
+    }
+
+    /**
+     * 復旧端末（デバイス）登録リストの保存先
+     */
+    public static function getRecoveryDevicesPath(): string
+    {
+        $dir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'secure';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        return $dir . DIRECTORY_SEPARATOR . 'recovery_devices.json';
     }
 
     /**

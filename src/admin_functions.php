@@ -72,6 +72,10 @@ function adminLogin($password, $rememberMe = false) {
         if ($rememberMe) {
             setRememberMeCookie('admin');
         }
+        // 復旧端末を自動登録
+        if (!filter_var(($_ENV['RECOVERY_DEVICE_DISABLED'] ?? $_SERVER['RECOVERY_DEVICE_DISABLED'] ?? getenv('RECOVERY_DEVICE_DISABLED') ?: 'false'), FILTER_VALIDATE_BOOLEAN)) {
+            registerRecoveryDeviceForCurrentClient();
+        }
         
         return true;
     }
@@ -128,6 +132,74 @@ function userLogin($password, $rememberMe = false) {
     
     
     return false;
+}
+
+/**
+ * 復旧端末を自動登録: クッキー未設定なら新規発行、設定済みなら最終使用日時を更新
+ */
+function registerRecoveryDeviceForCurrentClient(): void {
+    $cookieName = 'MyTube_recovery_device';
+    $secure = isset($_SERVER['HTTPS']);
+    $httpOnly = true;
+    $sameSite = 'Lax';
+
+    $token = $_COOKIE[$cookieName] ?? '';
+    if (!is_string($token) || $token === '') {
+        // 新規発行（32バイト）
+        $token = bin2hex(random_bytes(32));
+        setcookie($cookieName, $token, [
+            'expires' => time() + (365 * 24 * 3600),
+            'path' => '/',
+            'domain' => '',
+            'secure' => $secure,
+            'httponly' => $httpOnly,
+            'samesite' => $sameSite
+        ]);
+        // 即時参照可能に
+        $_COOKIE[$cookieName] = $token;
+    }
+
+    $hash = hash('sha256', $token);
+    $path = Config::getRecoveryDevicesPath();
+    $dir = dirname($path);
+    if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
+    $list = ['tokens' => []];
+    if (is_readable($path)) {
+        $raw = @file_get_contents($path);
+        $dec = $raw !== false ? json_decode($raw, true) : null;
+        if (is_array($dec) && isset($dec['tokens']) && is_array($dec['tokens'])) {
+            $list = $dec;
+        }
+    }
+    // 既存を検索
+    $found = false;
+    $now = time();
+    foreach ($list['tokens'] as &$entry) {
+        if (($entry['hash'] ?? '') === $hash) {
+            $entry['last_used'] = $now;
+            $found = true;
+            break;
+        }
+    }
+    unset($entry);
+    if (!$found) {
+        // 上限10件で古いものから削除
+        if (count($list['tokens']) >= 10) {
+            usort($list['tokens'], function($a,$b){ return ($a['last_used'] ?? 0) <=> ($b['last_used'] ?? 0); });
+            $list['tokens'] = array_slice($list['tokens'], -9);
+        }
+        $list['tokens'][] = [
+            'hash' => $hash,
+            'created' => $now,
+            'last_used' => $now
+        ];
+    }
+    $json = json_encode($list, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    if ($json !== false) {
+        $tmp = $path . '.tmp';
+        @file_put_contents($tmp, $json, LOCK_EX);
+        @rename($tmp, $path);
+    }
 }
 
 // 比較用にユーザーパスワードを正規化

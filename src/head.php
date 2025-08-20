@@ -43,11 +43,21 @@ $cssVersion = getAssetVersion('assets/css/style.css');
 $indexCssVersion = getAssetVersion('assets/css/index.css');
 $adminCssVersion = getAssetVersion('assets/css/admin.css');
 
-// ロゴ画像とファビコンのバージョン管理を追加
-$logoVersion = getAssetVersion('images/logo.png');
+// ロゴ/ファビコン: ユーザー上書きがあればそれを使い、なければデフォルト
+$brandDir = __DIR__ . '/data/branding';
+$userLogo48 = 'data/branding/logo-48.png';
+$userLogo96 = 'data/branding/logo-96.png';
+$userFav16 = 'data/branding/favicon-16x16.png';
+$userFav32 = 'data/branding/favicon-32x32.png';
+$userApple = 'data/branding/apple-touch-icon.png';
+$userA192 = 'data/branding/android-chrome-192x192.png';
+$userA512 = 'data/branding/android-chrome-512x512.png';
+
+// バージョン（キャッシュバスター）はファイルmtimeを使用
+$logoVersion = is_file(__DIR__ . '/' . $userLogo48) ? filemtime(__DIR__ . '/' . $userLogo48) : getAssetVersion('images/logo.png');
 $faviconSvgVersion = getAssetVersion('favicon.svg');
 $faviconIcoVersion = getAssetVersion('favicon.ico');
-$faviconPngVersion = getAssetVersion('favicon.png');
+$faviconPngVersion = is_file(__DIR__ . '/' . $userApple) ? filemtime(__DIR__ . '/' . $userApple) : getAssetVersion('favicon.png');
 ?>
 <head>
   <meta charset="UTF-8">
@@ -78,9 +88,20 @@ $faviconPngVersion = getAssetVersion('favicon.png');
   <?php endif ?>
   
   <!-- ファビコン -->
+  <?php if (is_file(__DIR__ . '/' . $userFav32)): ?>
+  <link rel="icon" type="image/png" sizes="32x32" href="<?= htmlspecialchars($userFav32) ?>?v=<?= filemtime(__DIR__ . '/' . $userFav32) ?>">
+  <?php else: ?>
   <link rel="icon" type="image/svg+xml" href="favicon.svg?v=<?= $faviconSvgVersion ?>">
   <link rel="icon" type="image/x-icon" href="favicon.ico?v=<?= $faviconIcoVersion ?>">
+  <?php endif; ?>
+  <?php if (is_file(__DIR__ . '/' . $userFav16)): ?>
+  <link rel="icon" type="image/png" sizes="16x16" href="<?= htmlspecialchars($userFav16) ?>?v=<?= filemtime(__DIR__ . '/' . $userFav16) ?>">
+  <?php endif; ?>
+  <?php if (is_file(__DIR__ . '/' . $userApple)): ?>
+  <link rel="apple-touch-icon" href="<?= htmlspecialchars($userApple) ?>?v=<?= filemtime(__DIR__ . '/' . $userApple) ?>">
+  <?php else: ?>
   <link rel="apple-touch-icon" href="favicon.png?v=<?= $faviconPngVersion ?>">
+  <?php endif; ?>
   
   <?php if ($currentVideo): ?>
   <meta name="current-video" content="<?= htmlspecialchars($currentVideo) ?>">

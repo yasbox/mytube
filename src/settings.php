@@ -102,6 +102,49 @@ include 'head.php';
                         </div>
                         <p class="text-sm ml-0 leading-relaxed settings-description w-full">この説明はメタデータ（description）として使用されます。（見た目上は表示されません）</p>
                     </div>
+
+                    <!-- サイトロゴ（サイト説明とデフォルトテーマの間に配置） -->
+                    <?php
+                        $brandUserLogoRel = 'data/branding/logo-square.png';
+                        $brandDefaultLogoRel = 'images/logo.png';
+                        $brandUserLogoAbs = __DIR__ . '/' . $brandUserLogoRel;
+                        $brandDefaultLogoAbs = __DIR__ . '/' . $brandDefaultLogoRel;
+                        if (is_file($brandUserLogoAbs)) {
+                            $brandLogoPreviewSrc = $brandUserLogoRel . '?v=' . filemtime($brandUserLogoAbs);
+                        } else {
+                            $brandLogoPreviewSrc = $brandDefaultLogoRel . '?v=' . (file_exists($brandDefaultLogoAbs) ? filemtime($brandDefaultLogoAbs) : '1.0.0');
+                        }
+                    ?>
+                    <div class="flex flex-col space-y-6">
+                        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-3 sm:items-start">
+                            <label class="font-bold settings-label mt-1 whitespace-nowrap flex-shrink-0">サイトロゴ</label>
+                            <div class="flex flex-col space-y-4 w-full">
+                                <div class="flex flex-col md:flex-row md:items-center gap-4">
+                                    <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center flex-shrink-0">
+                                        <img id="brand-logo-preview" alt="プレビュー" class="w-full h-full object-cover" src="<?= htmlspecialchars($brandLogoPreviewSrc, ENT_QUOTES, 'UTF-8') ?>" />
+                                        <span id="brand-logo-preview-placeholder" class="text-xs text-gray-400" style="display:none;">選択した画像のプレビュー</span>
+                                    </div>
+
+                                    <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-3 space-y-3 sm:space-y-0 w-full">
+                                        <!-- 隠しファイル入力 -->
+                                        <input id="brand-logo-file" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" />
+
+                                        <!-- カスタム参照ボタン -->
+                                        <button id="select-brand-logo-btn" type="button" class="px-5 py-3 bg-white text-gray-800 rounded-lg border border-gray-300 hover:bg-gray-50 whitespace-nowrap w-full sm:w-auto">ロゴ画像を選択</button>
+
+                                        <!-- 実行ボタン群 -->
+                                        <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-3 space-y-3 sm:space-y-0 w-full sm:w-auto">
+                                            <button id="upload-brand-logo-btn" class="px-5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap w-full sm:w-auto">変更</button>
+                                            <button id="reset-brand-logo-btn" class="px-5 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 whitespace-nowrap w-full sm:w-auto">リセット</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-sm text-gray-600 leading-relaxed">
+                                    推奨サイズ: 512×512 以上（PNG/JPEG/WebP）。
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <!-- デフォルトテーマ設定（サイト情報） -->
                     <div class="flex flex-col space-y-6">
                         <div class="flex items-center justify-start space-x-6">
@@ -119,6 +162,24 @@ include 'head.php';
                 <!-- 保護設定セクション -->
                 <div class="space-y-12 settings-section">
                     <h3 class="font-semibold border-b border-gray-200 pb-3">セキュリティ設定</h3>
+                    <?php $___envAdmin = $_ENV['ADMIN_PASSWORD'] ?? $_SERVER['ADMIN_PASSWORD'] ?? getenv('ADMIN_PASSWORD'); $___envManaged = is_string($___envAdmin) && $___envAdmin !== ''; ?>
+                    <?php if (!$___envManaged): ?>
+                    <!-- 管理者パスワード変更（パスワードで保護する の上に配置） -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="flex flex-col space-y-4">
+                            <label class="font-bold settings-label">管理者パスワードの変更</label>
+                            <div class="pl-4 flex flex-col space-y-3">
+                                <input id="admin-current-pw" type="password" class="px-4 py-3 rounded-lg admin-input w-full sm:w-80" placeholder="現在のパスワード" autocomplete="current-password">
+                                <input id="admin-new-pw" type="password" class="px-4 py-3 rounded-lg admin-input w-full sm:w-80" placeholder="新しいパスワード（8文字以上）" autocomplete="new-password">
+                                <div class="flex items-center gap-3">
+                                    <button id="change-admin-pw-btn" class="px-5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap w-full sm:w-auto">変更</button>
+                                    <button id="toggle-admin-pw-visibility" type="button" class="px-3 py-2 admin-input rounded-lg whitespace-nowrap">表示/非表示</button>
+                                </div>
+                                
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <!-- 保護設定ブロック -->

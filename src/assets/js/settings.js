@@ -11,6 +11,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const themeSelect = document.getElementById('theme-select');
     const siteDescriptionInput = document.getElementById('site-description-input');
     const saveSiteDescriptionBtn = document.getElementById('save-site-description-btn');
+    const brandLogoFile = document.getElementById('brand-logo-file');
+    const uploadBrandLogoBtn = document.getElementById('upload-brand-logo-btn');
+    const selectBrandLogoBtn = document.getElementById('select-brand-logo-btn');
+    const resetBrandLogoBtn = document.getElementById('reset-brand-logo-btn');
+    const brandLogoPreview = document.getElementById('brand-logo-preview');
+    const brandLogoPreviewPlaceholder = document.getElementById('brand-logo-preview-placeholder');
+    const adminCurrentPw = document.getElementById('admin-current-pw');
+    const adminNewPw = document.getElementById('admin-new-pw');
+    const changeAdminPwBtn = document.getElementById('change-admin-pw-btn');
+    const toggleAdminPwVisibilityBtn = document.getElementById('toggle-admin-pw-visibility');
+    
 
     // 初期化
     initializeSettings();
@@ -126,6 +137,57 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // 管理者パスワード表示/非表示
+    if (toggleAdminPwVisibilityBtn) {
+        toggleAdminPwVisibilityBtn.addEventListener('click', function() {
+            [adminCurrentPw, adminNewPw].forEach(function(i){
+                if (i) i.type = (i.type === 'password' ? 'text' : 'password');
+            });
+        });
+    }
+
+    // 管理者パスワード変更
+    if (changeAdminPwBtn) {
+        changeAdminPwBtn.addEventListener('click', async function() {
+            if (!adminCurrentPw || !adminNewPw) return;
+            const current = adminCurrentPw.value.trim();
+            const next = adminNewPw.value.trim();
+            if (!current || !next) { showError('現在のパスワードと新しいパスワードを入力してください'); return; }
+            if (!isStrong(next)) { showError('パスワードは8文字以上で入力してください'); return; }
+
+            const body = new URLSearchParams();
+            body.append('action', 'change_admin_password');
+            body.append('current_password', current);
+            body.append('new_password', next);
+            try {
+                const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                const resp = await fetch('admin_api.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    credentials: 'same-origin',
+                    body: body.toString() + `&csrf_token=${encodeURIComponent(csrf)}`
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    showSuccess('管理者パスワードを変更しました。再ログインが必要な場合があります');
+                    // 入力をクリア
+                    adminCurrentPw.value = '';
+                    adminNewPw.value = '';
+                } else {
+                    showError(data.message || '変更に失敗しました');
+                }
+            } catch (e) {
+                showError('変更に失敗しました');
+            }
+        });
+    }
+
+    
+
+    function isStrong(v) {
+        return !!v && v.length >= 8;
+    }
+
     if (saveSiteDescriptionBtn && siteDescriptionInput) {
         saveSiteDescriptionBtn.addEventListener('click', async function() {
             const description = siteDescriptionInput.value.trim();
@@ -149,6 +211,113 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             // デフォルト値のみ更新（現在のページのテーマや localStorage は変更しない）
             await updateSettingsPartial({ 'ui.theme': val });
+        });
+    }
+
+    // サイトロゴ: ファイル選択時プレビュー（正方形トリミング見た目）
+    if (brandLogoFile) {
+        brandLogoFile.addEventListener('change', function(e) {
+            const file = e.target.files && e.target.files[0];
+            if (!file) {
+                if (brandLogoPreview) brandLogoPreview.style.display = 'none';
+                if (brandLogoPreviewPlaceholder) brandLogoPreviewPlaceholder.style.display = '';
+                return;
+            }
+            const allowed = ['image/png','image/jpeg','image/webp'];
+            if (!allowed.includes(file.type)) {
+                showError('PNG/JPEG/WebP の画像を選択してください');
+                e.target.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const img = new Image();
+                img.onload = function() {
+                    const size = 256; // プレビュー用
+                    const canvas = document.createElement('canvas');
+                    canvas.width = size; canvas.height = size;
+                    const ctx = canvas.getContext('2d');
+                    const minSide = Math.min(img.width, img.height);
+                    const sx = (img.width - minSide) / 2;
+                    const sy = (img.height - minSide) / 2;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+                    const dataUrl = canvas.toDataURL('image/png');
+                    if (brandLogoPreview) {
+                        brandLogoPreview.src = dataUrl;
+                        brandLogoPreview.style.display = '';
+                    }
+                    if (brandLogoPreviewPlaceholder) brandLogoPreviewPlaceholder.style.display = 'none';
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // カスタム参照ボタン
+    if (selectBrandLogoBtn && brandLogoFile) {
+        selectBrandLogoBtn.addEventListener('click', function() {
+            brandLogoFile.click();
+        });
+    }
+
+    // サイトロゴ: アップロード（ffmpeg処理はサーバ側）
+    if (uploadBrandLogoBtn) {
+        uploadBrandLogoBtn.addEventListener('click', async function() {
+            if (!brandLogoFile || !brandLogoFile.files || !brandLogoFile.files[0]) {
+                showError('画像ファイルを選択してください');
+                return;
+            }
+            const file = brandLogoFile.files[0];
+            const form = new FormData();
+            form.append('action', 'upload_brand_logo');
+            form.append('brand_logo', file);
+            try {
+                const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                form.append('csrf_token', csrf);
+                const resp = await fetch('admin_api.php', { method: 'POST', credentials: 'same-origin', body: form });
+                const data = await resp.json();
+                if (data.success) {
+                    showSuccess('サイトロゴを更新しました');
+                    // 画像キャッシュを確実に更新するためリロード
+                    window.location.reload();
+                } else {
+                    showError(data.message || '更新に失敗しました');
+                }
+            } catch (e) {
+                console.error(e);
+                showError('更新に失敗しました');
+            }
+        });
+    }
+
+    // サイトロゴ: リセット（ユーザー生成画像の削除）
+    if (resetBrandLogoBtn) {
+        resetBrandLogoBtn.addEventListener('click', async function() {
+            const ok = confirm('ユーザー設定のロゴ/ファビコン画像を削除してデフォルトに戻します。よろしいですか？');
+            if (!ok) return;
+            try {
+                const body = new URLSearchParams();
+                body.append('action', 'reset_brand_logo');
+                const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                const resp = await fetch('admin_api.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    credentials: 'same-origin',
+                    body: body.toString() + `&csrf_token=${encodeURIComponent(csrf)}`
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    showSuccess('デフォルトに戻しました');
+                    window.location.reload();
+                } else {
+                    showError(data.message || 'リセットに失敗しました');
+                }
+            } catch (e) {
+                console.error(e);
+                showError('リセットに失敗しました');
+            }
         });
     }
 

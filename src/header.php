@@ -52,7 +52,9 @@ if (!function_exists('getAssetVersion')) {
     return '1.0.0'; // デフォルトバージョン
   }
 }
-$logoVersion = getAssetVersion('images/logo.png');
+$userLogo48Rel = 'data/branding/logo-48.png';
+$logoPathForTag = is_file(__DIR__ . '/' . $userLogo48Rel) ? $userLogo48Rel : 'images/logo.png';
+$logoVersion = file_exists(__DIR__ . '/' . $logoPathForTag) ? filemtime(__DIR__ . '/' . $logoPathForTag) : '1.0.0';
 
 // メニュー項目の数を計算
 $menuItems = 0;
@@ -74,7 +76,7 @@ $hideHamburger = $menuItems === 0;
       <a href="index.php" class="flex items-center space-x-2 md:space-x-4 lg:space-x-6 hover:opacity-80 transition-opacity duration-300">
         <div class="flex items-center space-x-2 md:space-x-3 lg:space-x-4">
           <?php $brandName = Config::get('app.name', 'MyTube'); ?>
-          <img src="images/logo.png?v=<?= $logoVersion ?>" alt="<?= htmlspecialchars($brandName) ?>" class="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 object-contain">
+          <img src="<?= htmlspecialchars($logoPathForTag) ?>?v=<?= $logoVersion ?>" alt="<?= htmlspecialchars($brandName) ?>" class="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 object-contain">
           <!-- サイトタイトル -->
           <h1 id="site-title" class="mb-0 text-2xl md:text-3xl lg:text-4xl font-bold text-primary"><?= htmlspecialchars($brandName) ?></h1>
         </div>

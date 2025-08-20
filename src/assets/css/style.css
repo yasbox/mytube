@@ -58,6 +58,37 @@ body h6 { font-size: var(--h6-sm); line-height: 1.5;  margin: 0 0 0.5em; }
   transform: translateZ(0);
 }
 
+/* Upload: drag-over highlight */
+#drop-area.drag-over {
+  outline: 2px dashed var(--blue-600);
+  outline-offset: 4px;
+  background: rgba(37, 99, 235, 0.08);
+}
+
+/* Full-page drop overlay */
+#page-drop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+#page-drop-overlay.hidden { display: none; }
+#page-drop-overlay .page-drop-overlay__inner {
+  background: var(--glass-bg);
+  border: 2px dashed var(--blue-600);
+  color: var(--text-primary);
+  padding: 1.5rem 2rem;
+  border-radius: 0.75rem;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+#page-drop-overlay .page-drop-overlay__icon { font-size: 2rem; margin-bottom: 0.5rem; }
+#page-drop-overlay .page-drop-overlay__text { font-weight: 700; margin-bottom: 0.25rem; }
+#page-drop-overlay .page-drop-overlay__sub { font-size: 0.875rem; color: var(--text-secondary); }
+
 .card-hover:hover {
   transform: translateY(-2px) translateZ(0);
   box-shadow: var(--shadow), 0 8px 20px rgba(0, 0, 0, 0.15);

@@ -979,6 +979,21 @@
   }
 }
 
+/* 設定ページ: サイト説明のレイアウト修正（タブレット帯） */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  /* Tailwind の sm:w-[40rem] を上書きして可変幅にする */
+  #site-description-input {
+    width: auto !important;
+    flex: 1 1 0%;
+    min-width: 0;
+  }
+
+  /* ボタンは縮まないように固定 */
+  #save-site-description-btn {
+    flex-shrink: 0;
+  }
+}
+
 /* スクロールバーのカスタマイズ */
 .admin-table-container::-webkit-scrollbar {
   height: 8px;

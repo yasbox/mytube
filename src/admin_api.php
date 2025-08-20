@@ -54,6 +54,96 @@ if (!isAdmin()) {
     exit;
 }
 
+// 旧: リカバリーコード生成APIは廃止
+// 管理者パスワード変更API
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'change_admin_password') {
+    requireCsrfOnPost();
+
+    // 環境変数で管理されている場合は変更不可
+    $envAdmin = $_ENV['ADMIN_PASSWORD'] ?? $_SERVER['ADMIN_PASSWORD'] ?? getenv('ADMIN_PASSWORD') ?: null;
+    if (is_string($envAdmin) && $envAdmin !== '') {
+        header('Content-Type: application/json');
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'この環境ではADMIN_PASSWORDが環境変数で管理されているため、UIからは変更できません']);
+        exit;
+    }
+
+    $current = (string)($_POST['current_password'] ?? '');
+    $new = (string)($_POST['new_password'] ?? '');
+
+    // 入力検証
+    if (trim($current) === '' || trim($new) === '') {
+        header('Content-Type: application/json');
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => '現在のパスワードと新しいパスワードを入力してください']);
+        exit;
+    }
+    // 強度チェック: 8文字以上（複雑性の必須条件なし）
+    $lengthOk = mb_strlen($new, 'UTF-8') >= 8;
+    if (!$lengthOk) {
+        header('Content-Type: application/json');
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => 'パスワードは8文字以上で入力してください']);
+        exit;
+    }
+
+    // 現在のパスワード確認
+    $currentConfigured = (string)Config::get('security.admin_password', 'admin123');
+    $curNorm = normalizeUserPasswordForCompare($current) ?? '';
+    $cfgNorm = normalizeUserPasswordForCompare($currentConfigured) ?? '';
+    if ($curNorm === '' || $cfgNorm === '' || !hash_equals($cfgNorm, $curNorm)) {
+        header('Content-Type: application/json');
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => '現在のパスワードが正しくありません']);
+        exit;
+    }
+
+    // ファイルへ保存（平文。環境変数が無い環境のみ使用。アクセス権で防御）
+    $path = Config::getSecureAdminPasswordPath();
+    $dir = dirname($path);
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    $payload = [
+        'password' => $new,
+        'updated_at' => time(),
+        'updated_ip' => $_SERVER['REMOTE_ADDR'] ?? ''
+    ];
+    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    if ($json === false) {
+        header('Content-Type: application/json');
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => '内部エラー（シリアライズ失敗）']);
+        exit;
+    }
+    $tmp = $path . '.tmp';
+    $bytes = @file_put_contents($tmp, $json, LOCK_EX);
+    if ($bytes === false) {
+        header('Content-Type: application/json');
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => '設定ファイルの書き込みに失敗しました']);
+        exit;
+    }
+    $ok = @rename($tmp, $path);
+    if (!$ok) {
+        @unlink($tmp);
+        header('Content-Type: application/json');
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => '設定ファイルの更新に失敗しました']);
+        exit;
+    }
+
+    // ランタイムへ反映 & RememberMe無効化
+    Config::set('security.admin_password', $new);
+    if (function_exists('clearRememberMeCookie')) {
+        clearRememberMeCookie();
+    }
+
+    header('Content-Type: application/json');
+    echo json_encode(['success' => true, 'message' => '管理者パスワードを変更しました']);
+    exit;
+}
+
 // サムネイル差し替えAPI（画像→JPEG/長辺最大1000px/品質=軽め）
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'upload_thumbnail') {
     requireCsrfOnPost();
@@ -190,6 +280,146 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         'message' => 'サムネイルを更新しました',
         'thumbnail_url' => 'thumbnails/' . $basename . '.jpg?v=' . time()
     ]);
+    exit;
+}
+
+// サイトロゴアップロード（正方形化→ロゴ/ファビコン群生成）
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'upload_brand_logo') {
+    requireCsrfOnPost();
+
+    if (!isset($_FILES['brand_logo'])) {
+        header('Content-Type: application/json');
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => '画像がアップロードされていません']);
+        exit;
+    }
+
+    $file = $_FILES['brand_logo'];
+    if (!is_array($file) || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        header('Content-Type: application/json');
+        http_response_code(400);
+        $err = $file['error'] ?? UPLOAD_ERR_NO_FILE;
+        echo json_encode(['success' => false, 'message' => 'アップロードに失敗しました (error=' . (string)$err . ')']);
+        exit;
+    }
+
+    // サイズ上限（5MB）
+    $maxBytes = 5 * 1024 * 1024;
+    if (($file['size'] ?? 0) > $maxBytes) {
+        header('Content-Type: application/json');
+        http_response_code(413);
+        echo json_encode(['success' => false, 'message' => 'ファイルサイズが大きすぎます（最大5MB）']);
+        exit;
+    }
+
+    $tmpName = $file['tmp_name'];
+    if (!is_uploaded_file($tmpName)) {
+        header('Content-Type: application/json');
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => '不正なアップロードです']);
+        exit;
+    }
+
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mime = $finfo->file($tmpName);
+    $allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!in_array($mime, $allowed, true)) {
+        header('Content-Type: application/json');
+        http_response_code(415);
+        echo json_encode(['success' => false, 'message' => '対応していない画像形式です（PNG/JPEG/WebPのみ）']);
+        exit;
+    }
+
+    $imgInfo = @getimagesize($tmpName);
+    if ($imgInfo === false || !isset($imgInfo[0], $imgInfo[1])) {
+        header('Content-Type: application/json');
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => '画像として読み込めません']);
+        exit;
+    }
+
+    // 一時保存
+    $tempDir = __DIR__ . '/temp_uploads';
+    if (!is_dir($tempDir)) { @mkdir($tempDir, 0755, true); }
+    $ext = pathinfo($file['name'], PATHINFO_EXTENSION) ?: 'img';
+    $tempPath = $tempDir . '/' . uniqid('brand_', true) . '.' . preg_replace('/[^a-zA-Z0-9]/', '', strtolower($ext));
+    if (!@move_uploaded_file($tmpName, $tempPath)) {
+        header('Content-Type: application/json');
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => '一時ファイルの保存に失敗しました']);
+        exit;
+    }
+
+    // 出力先
+    $brandDir = __DIR__ . '/data/branding';
+    if (!is_dir($brandDir)) { @mkdir($brandDir, 0755, true); }
+    $square = $brandDir . '/logo-square.png';
+    $logo48 = $brandDir . '/logo-48.png';
+    $logo96 = $brandDir . '/logo-96.png';
+    $fav16 = $brandDir . '/favicon-16x16.png';
+    $fav32 = $brandDir . '/favicon-32x32.png';
+    $apple = $brandDir . '/apple-touch-icon.png';
+    $a192 = $brandDir . '/android-chrome-192x192.png';
+    $a512 = $brandDir . '/android-chrome-512x512.png';
+
+    $ffmpeg = (string)Config::get('storage.ffmpeg_path', '/usr/bin/ffmpeg');
+    // 正方形512px
+    $vfSquare = "crop='min(iw,ih)':'min(iw,ih)',scale=512:512:flags=lanczos";
+    $cmd1 = $ffmpeg . ' -y -i ' . escapeshellarg($tempPath) . ' -vf ' . escapeshellarg($vfSquare) . ' -map_metadata -1 ' . escapeshellarg($square) . ' 2>&1';
+    $out1 = shell_exec($cmd1);
+
+    // 派生生成
+    $gen = function($in, $w, $h, $out) use ($ffmpeg) {
+        $vf = 'scale=' . (int)$w . ':' . (int)$h . ':flags=lanczos';
+        $cmd = $ffmpeg . ' -y -i ' . escapeshellarg($in) . ' -vf ' . escapeshellarg($vf) . ' -map_metadata -1 ' . escapeshellarg($out) . ' 2>&1';
+        return shell_exec($cmd);
+    };
+    $gen($square, 48, 48, $logo48);
+    $gen($square, 96, 96, $logo96);
+    $gen($square, 16, 16, $fav16);
+    $gen($square, 32, 32, $fav32);
+    $gen($square, 180, 180, $apple);
+    $gen($square, 192, 192, $a192);
+    $gen($square, 512, 512, $a512);
+
+    // 一時ファイル削除
+    @unlink($tempPath);
+
+    // 成功判定（最低限）
+    if (!file_exists($square) || !file_exists($fav32)) {
+        header('Content-Type: application/json');
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => '画像の生成に失敗しました']);
+        exit;
+    }
+
+    header('Content-Type: application/json');
+    echo json_encode(['success' => true, 'message' => 'サイトロゴを更新しました']);
+    exit;
+}
+
+// サイトロゴリセット（ユーザー生成ファイル削除）
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'reset_brand_logo') {
+    requireCsrfOnPost();
+    $brandDir = __DIR__ . '/data/branding';
+    $targets = [
+        $brandDir . '/logo-square.png',
+        $brandDir . '/logo-48.png',
+        $brandDir . '/logo-96.png',
+        $brandDir . '/favicon-16x16.png',
+        $brandDir . '/favicon-32x32.png',
+        $brandDir . '/apple-touch-icon.png',
+        $brandDir . '/android-chrome-192x192.png',
+        $brandDir . '/android-chrome-512x512.png',
+    ];
+    $ok = true;
+    foreach ($targets as $p) {
+        if (is_file($p)) {
+            $ok = @unlink($p) && $ok;
+        }
+    }
+    header('Content-Type: application/json');
+    echo json_encode(['success' => true, 'message' => 'ブランド画像をリセットしました']);
     exit;
 }
 
