@@ -199,11 +199,11 @@ $isAdminPage = false;
           </button>
         </form>
 
-        <!-- 復旧端末（自動登録済み端末のみ表示） -->
+        <!-- 復旧端末（自動登録済み端末のみ表示。管理者パスワードを環境変数で管理している場合は使えないため非表示） -->
         <?php
           $recoveryCookie = $_COOKIE['MyTube_recovery_device'] ?? '';
           $hasRecovery = false;
-          if (is_string($recoveryCookie) && $recoveryCookie !== '') {
+          if (isRecoveryDeviceEnabled() && is_string($recoveryCookie) && $recoveryCookie !== '') {
             $path = Config::getRecoveryDevicesPath();
             if (is_readable($path)) {
               $raw = @file_get_contents($path);
@@ -217,7 +217,7 @@ $isAdminPage = false;
             }
           }
         ?>
-        <?php if ($hasRecovery && !filter_var(($_ENV['RECOVERY_DEVICE_DISABLED'] ?? $_SERVER['RECOVERY_DEVICE_DISABLED'] ?? getenv('RECOVERY_DEVICE_DISABLED') ?: 'false'), FILTER_VALIDATE_BOOLEAN)): ?>
+        <?php if ($hasRecovery): ?>
         <?php if (!empty($_SESSION['flash_success']) || !empty($_SESSION['flash_error'])): ?>
           <div class="mt-4">
             <?php if (!empty($_SESSION['flash_success'])): ?>

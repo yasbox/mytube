@@ -73,7 +73,7 @@ function adminLogin($password, $rememberMe = false) {
             setRememberMeCookie('admin');
         }
         // 復旧端末を自動登録
-        if (!filter_var(($_ENV['RECOVERY_DEVICE_DISABLED'] ?? $_SERVER['RECOVERY_DEVICE_DISABLED'] ?? getenv('RECOVERY_DEVICE_DISABLED') ?: 'false'), FILTER_VALIDATE_BOOLEAN)) {
+        if (isRecoveryDeviceEnabled()) {
             registerRecoveryDeviceForCurrentClient();
         }
         
@@ -132,6 +132,24 @@ function userLogin($password, $rememberMe = false) {
     
     
     return false;
+}
+
+/**
+ * 管理者パスワードが環境変数（.env の ADMIN_PASSWORD）で管理されているか
+ * この場合は UI からの変更・復旧端末による再設定はできない
+ */
+function isAdminPasswordManagedByEnv(): bool {
+    $envAdmin = $_ENV['ADMIN_PASSWORD'] ?? $_SERVER['ADMIN_PASSWORD'] ?? getenv('ADMIN_PASSWORD') ?: null;
+    return is_string($envAdmin) && $envAdmin !== '';
+}
+
+/**
+ * 復旧端末による管理者パスワード再設定が使えるか
+ * （RECOVERY_DEVICE_DISABLED=true、または管理者パスワードを環境変数で管理している場合は使えない）
+ */
+function isRecoveryDeviceEnabled(): bool {
+    $disabled = filter_var(($_ENV['RECOVERY_DEVICE_DISABLED'] ?? $_SERVER['RECOVERY_DEVICE_DISABLED'] ?? getenv('RECOVERY_DEVICE_DISABLED') ?: 'false'), FILTER_VALIDATE_BOOLEAN);
+    return !$disabled && !isAdminPasswordManagedByEnv();
 }
 
 /**
