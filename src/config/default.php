@@ -53,7 +53,9 @@ return [
         'admin_password' => 'admin123',
         'admin_session_lifetime' => 86400,
         'remember_me_lifetime' => 30 * 24 * 3600,
-        'remember_me_cookie_name' => 'MyTube_remember'
+        'remember_me_cookie_name' => 'MyTube_remember',
+        // 動画・サムネイルの専用 URL が切り替わる間隔（秒）。発行した URL はこの1〜2倍の時間有効
+        'media_url_ttl' => 6 * 3600
     ],
     'video' => [
         'mime_types' => [

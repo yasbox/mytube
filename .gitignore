@@ -12,6 +12,8 @@ tmp/
 temp/
 src/temp_uploads/*
 !src/temp_uploads/.gitkeep
+# 動画・サムネイルの期限付き専用 URL（media.php が自動生成）
+src/media/
 
 # アップロードされたファイル
 src/videos/*

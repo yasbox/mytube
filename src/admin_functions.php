@@ -542,6 +542,10 @@ function toggleVideoVisibility($videoFile) {
     $success = Functions::saveVideoMetadata($basename, $newMetadata);
     
     if ($success) {
+        if (!$newVisibility) {
+            // 非公開にしたら、発行済みの専用 URL からも取得できないようにする
+            removeMediaUrlsFor($videoFile);
+        }
         $status = $newVisibility ? '公開' : '非公開';
         return ['success' => true, 'message' => "動画を{$status}にしました", 'is_public' => $newVisibility];
     } else {

@@ -33,7 +33,29 @@ function getVideoStats() {
 }
 
 function deleteVideo($videoFile) {
-    return Functions::deleteVideo($videoFile);
+    $result = Functions::deleteVideo($videoFile);
+    if (!empty($result['success'])) {
+        removeMediaUrlsFor($videoFile);
+    }
+    return $result;
+}
+
+/**
+ * 動画・サムネイルの期限付き専用 URL（media/、media.php が作成）を削除する
+ * 専用 URL は元ファイルへのハードリンクのため、動画の削除・非公開化の直後から取得できないよう消す
+ */
+function removeMediaUrlsFor($videoFile) {
+    $videoFile = basename((string)$videoFile);
+    if (!preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]*$/', $videoFile)) {
+        return;
+    }
+    $names = [$videoFile, pathinfo($videoFile, PATHINFO_FILENAME) . '.jpg'];
+    foreach ($names as $name) {
+        foreach (glob(__DIR__ . '/media/*/*/' . $name) ?: [] as $link) {
+            @unlink($link);
+            @rmdir(dirname($link));
+        }
+    }
 }
 
 function updateVideoMetadata($videoFile, $title, $comment) {
