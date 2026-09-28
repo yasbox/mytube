@@ -80,6 +80,12 @@ function requireCsrfTokenForRequest() {
     exit;
 }
 
+// Resumable.js の識別子（「サイズ-ファイル名」から英数字・_・- 以外を除いたもの）か
+// temp_uploads/ 配下のディレクトリ名に使うため、パス区切り等を含むものは受け付けない
+function isValidResumableIdentifier($identifier): bool {
+    return is_string($identifier) && preg_match('/^[0-9A-Za-z_-]{1,200}$/', $identifier) === 1;
+}
+
 // OPTIONSリクエストの処理（プリフライトは常に許可）
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
@@ -121,6 +127,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!isset($_POST['action']) || $_POST
         // 必須パラメータのチェック
         if (empty($resumableIdentifier) || empty($resumableFilename)) {
             throw new Exception('必要なパラメータが不足しています');
+        }
+        if (!isValidResumableIdentifier($resumableIdentifier)) {
+            throw new Exception('パラメータが不正です');
         }
         
         // ファイル形式のチェック
@@ -216,7 +225,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['resumableChunkNumber'])
         exit;
     }
     
-    if (!empty($resumableIdentifier) && $resumableChunkNumber > 0) {
+    if (isValidResumableIdentifier($resumableIdentifier) && $resumableChunkNumber > 0) {
         $tempDir = "temp_uploads/{$resumableIdentifier}";
         $chunkPath = "{$tempDir}/chunk_{$resumableChunkNumber}";
         
@@ -257,9 +266,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     requireCsrfTokenForRequest();
     $resumableIdentifier = $_POST['resumableIdentifier'] ?? '';
     
-    if (empty($resumableIdentifier)) {
+    if (!isValidResumableIdentifier($resumableIdentifier)) {
         header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'resumableIdentifierが指定されていません']);
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'resumableIdentifierが不正です']);
         exit;
     }
     

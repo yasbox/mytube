@@ -231,7 +231,10 @@
           resumable.cancel();
 
           if (currentIdentifier) {
-            var bodyStr = 'action=cancel_upload&resumableIdentifier=' + encodeURIComponent(currentIdentifier);
+            var cancelCsrfMeta = document.querySelector('meta[name="csrf-token"]');
+            var cancelCsrf = cancelCsrfMeta ? cancelCsrfMeta.getAttribute('content') : '';
+            var bodyStr = 'action=cancel_upload&resumableIdentifier=' + encodeURIComponent(currentIdentifier)
+              + '&csrf_token=' + encodeURIComponent(cancelCsrf || '');
             fetch('upload_api.php', {
               method: 'POST',
               headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
