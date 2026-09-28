@@ -348,9 +348,10 @@ function resetVideoList(savedScrollTop = null) {
 
 function renderVideoCard(video) {
   const isActive = video.isActive;
-  const title = (video.title || 'タイトルなし').replace(/[&<>'"]/g, function(tag) {
+  const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, function(tag) {
     const chars = {'&':'&amp;','<':'&lt;','>':'&gt;','\'':'&#39;','"':'&quot;'}; return chars[tag] || tag;
   });
+  const title = esc(video.title || 'タイトルなし');
   const views = Number(video.views).toLocaleString();
   const likes = Number(video.likes).toLocaleString();
   const likeRate = video.views > 0 ? Math.round((video.likes / video.views) * 1000) / 10 : 0;
@@ -371,15 +372,15 @@ function renderVideoCard(video) {
     <div class="group overflow-hidden optimize-rendering video-card transform transition-all duration-300 rounded-lg">
       <a href="?v=${encodeURIComponent(video.video)}${shareParam}" class="block">
         <div class="relative w-full aspect-video overflow-hidden">
-          <img class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110 lazy-image video-thumbnail" data-src="${video.thumb}" alt="${title}" loading="lazy" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjE4MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMzc0MTUxIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzlDQTNBRiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+">
-          ${durationDisplay ? `<div class="absolute bottom-2 right-2 bg-black/80 text-white text-sm md:text-xs px-2 py-1 rounded-md backdrop-blur-sm">${durationDisplay}</div>` : ''}
+          <img class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110 lazy-image video-thumbnail" data-src="${esc(video.thumb)}" alt="${title}" loading="lazy" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjE4MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMzc0MTUxIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzlDQTNBRiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+">
+          ${durationDisplay ? `<div class="absolute bottom-2 right-2 bg-black/80 text-white text-sm md:text-xs px-2 py-1 rounded-md backdrop-blur-sm">${esc(durationDisplay)}</div>` : ''}
           ${isActive ? `<div class="absolute inset-0 bg-gradient-to-t from-blue-500/30 to-transparent flex items-center justify-center"><div class="bg-blue-500/90 backdrop-blur-sm rounded-full p-2"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div></div>` : ''}
         </div>
         <div class="p-2 md:p-2 lg:p-3">
           <h4 class="video-title-main text-base md:text-base lg:text-lg xl:text-xl font-semibold mb-1 line-clamp-2 transition-colors duration-300 break-words min-h-[2.5rem] md:min-h-[3rem] lg:min-h-[3.5rem] xl:min-h-[4rem]">${title}</h4>
           <div class="flex items-center text-sm md:text-sm lg:text-base xl:text-lg video-meta-info mb-2 min-w-0">
             <svg class="w-4 h-4 md:w-4 md:h-4 lg:w-5 lg:h-5 xl:w-6 xl:h-6 mr-1.5 md:mr-2 lg:mr-3 flex-shrink-0 video-meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-            <span class="truncate">${(video.upload_date || '').toString().split(' ')[0]}</span>
+            <span class="truncate">${esc((video.upload_date || '').toString().split(' ')[0])}</span>
           </div>
           <div class="flex items-center justify-between flex-wrap gap-2">
             <div class="flex items-center space-x-2 md:space-x-3 lg:space-x-4 xl:space-x-5 flex-wrap">

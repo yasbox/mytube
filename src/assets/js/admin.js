@@ -1,5 +1,20 @@
 // 管理機能用のJavaScript
 
+// HTML に埋め込む値のエスケープ（タイトル等に記号が含まれても表示・動作が崩れないように）
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// 動画一覧の行を取得（ファイル名はセレクタ用にエスケープ）
+function findVideoRow(videoFile) {
+    return document.querySelector(`tr[data-filename="${CSS.escape(videoFile)}"]`);
+}
+
 // 管理者ログイン
 async function adminLogin() {
     const password = document.getElementById('admin-password').value;
@@ -368,7 +383,7 @@ function showEditModal(video) {
                             <h3 class="font-bold edit-modal-title truncate">動画情報の編集</h3>
                         </div>
                     </div>
-                    <button onclick="closeEditModal()" class="p-1.5 md:p-2 edit-modal-close hover:bg-gray-700/50 rounded-lg transition-all duration-200 flex-shrink-0 ml-2">
+                    <button type="button" data-action="close" class="p-1.5 md:p-2 edit-modal-close hover:bg-gray-700/50 rounded-lg transition-all duration-200 flex-shrink-0 ml-2">
                         <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
@@ -379,14 +394,14 @@ function showEditModal(video) {
                 <div class="p-4 md:p-6 space-y-6 edit-modal-content">
                     <!-- サムネイル表示 -->
                     <div class="flex justify-center">
-                        <div class="bg-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity duration-200 aspect-video edit-modal-thumb" onclick="document.getElementById('thumbnail-file-${safeVideoId}').click()" title="クリックしてサムネイルを差し替え">
-                            ${video.has_thumbnail ? 
-                                `<img src="${video.thumb_url || ('thumbnails/' + video.basename + '.jpg')}" alt="サムネイル" class="w-full h-full object-cover">` :
+                        <div data-action="pick-thumbnail" class="bg-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity duration-200 aspect-video edit-modal-thumb" title="クリックしてサムネイルを差し替え">
+                            ${video.has_thumbnail ?
+                                `<img src="${escapeHtml(video.thumb_url || ('thumbnails/' + video.basename + '.jpg'))}" alt="サムネイル" class="w-full h-full object-cover">` :
                                 `<img src="images/default-thumbnail-small.svg" alt="デフォルトサムネイル" class="w-full h-full object-cover">`
                             }
                         </div>
                     </div>
-                    <input type="file" id="thumbnail-file-${safeVideoId}" accept="image/jpeg,image/png,image/webp" class="hidden" onchange="uploadThumbnail('${video.filename}', '${video.basename}')" />
+                    <input type="file" id="thumbnail-file-${safeVideoId}" accept="image/jpeg,image/png,image/webp" class="hidden" />
                     <p class="text-sm md:text-base text-center">画像をクリックでサムネイルを変更できます。</br><span class="text-gray-400">対応形式: JPEG / PNG / WebP（最大5MB）</span></p>
 
                     <!-- 編集フォーム -->
@@ -420,7 +435,7 @@ function showEditModal(video) {
                 
                 <!-- モーダルフッター -->
                 <div class="sticky bottom-0 z-10 flex items-center justify-end space-x-2 md:space-x-3 p-3 md:p-6 edit-modal-footer backdrop-blur-sm rounded-b-2xl min-h-[60px] md:min-h-0">
-                    <button onclick="closeEditModal()" 
+                    <button type="button" data-action="close"
                             class="px-5 py-4 md:px-6 md:py-3 edit-modal-cancel-btn rounded-lg hover:shadow-xl active:shadow-lg transition-all duration-200 text-sm md:text-base font-semibold flex items-center shadow-lg flex-shrink-0">
                         <svg class="w-5 h-5 md:w-5 md:h-5 mr-1 md:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -428,7 +443,7 @@ function showEditModal(video) {
                         <span class="hidden sm:inline">キャンセル</span>
                         <span class="sm:hidden">取消</span>
                     </button>
-                    <button onclick="updateMetadataFromModal('${video.filename}')" 
+                    <button type="button" id="modal-update-btn"
                             class="px-5 py-4 md:px-6 md:py-3 edit-modal-update-btn rounded-lg hover:shadow-xl active:shadow-lg transition-all duration-200 text-sm md:text-base font-semibold flex items-center shadow-lg flex-shrink-0">
                         <svg class="w-5 h-5 md:w-5 md:h-5 mr-1 md:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -443,7 +458,15 @@ function showEditModal(video) {
     
     // モーダルをDOMに追加
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
+
+    // 操作はイベントリスナーで登録する（ファイル名を HTML 属性の文字列に埋め込まない）
+    const modalRoot = document.getElementById('edit-modal');
+    const thumbnailInput = document.getElementById(`thumbnail-file-${safeVideoId}`);
+    modalRoot.querySelectorAll('[data-action="close"]').forEach(el => el.addEventListener('click', closeEditModal));
+    modalRoot.querySelector('[data-action="pick-thumbnail"]').addEventListener('click', () => thumbnailInput.click());
+    thumbnailInput.addEventListener('change', () => uploadThumbnail(video.filename, video.basename));
+    document.getElementById('modal-update-btn').addEventListener('click', () => updateMetadataFromModal(video.filename));
+
     // 入力フィールドに値を設定
     const titleInput = document.getElementById(`modal-title-${safeVideoId}`);
     const commentInput = document.getElementById(`modal-comment-${safeVideoId}`);
@@ -533,7 +556,7 @@ async function updateMetadataFromModal(videoFile) {
     
     try {
         // ローディング状態を表示
-        const updateButton = document.querySelector('button[onclick="updateMetadataFromModal(\'' + videoFile + '\')"]');
+        const updateButton = document.getElementById('modal-update-btn');
         if (updateButton) {
             updateButton.disabled = true;
             updateButton.innerHTML = `
@@ -572,7 +595,7 @@ async function updateMetadataFromModal(videoFile) {
         showNotification('更新に失敗しました', 'error');
     } finally {
         // ボタンを元に戻す
-        const updateButton = document.querySelector('button[onclick="updateMetadataFromModal(\'' + videoFile + '\')"]');
+        const updateButton = document.getElementById('modal-update-btn');
         if (updateButton) {
             updateButton.disabled = false;
             updateButton.innerHTML = `
@@ -942,55 +965,64 @@ function createVideoRow(video, videoId) {
     // ファイル拡張子を取得
     const fileExtension = video.filename.split('.').pop().toLowerCase();
     const isMp4 = fileExtension === 'mp4';
-    
+    const thumbSrc = video.has_thumbnail
+        ? (video.thumb_url || ('thumbnails/' + video.basename + '.jpg'))
+        : 'images/default-thumbnail-small.svg';
+
+    // 値はすべてエスケープし、操作はイベントリスナーで登録する（タイトルの記号でボタンが壊れないように）
     row.innerHTML = `
         <td class="px-1 md:px-2 py-2 md:py-3 whitespace-nowrap overflow-hidden text-ellipsis" data-label="動画">
             <div class="flex items-center space-x-2 md:space-x-3">
-                <button onclick="toggleEditMode('${videoId}')" class="edit-thumb-btn p-1 md:p-2 admin-edit-btn rounded-lg transition-all duration-200" title="編集">
+                <button type="button" data-action="edit" class="edit-thumb-btn p-1 md:p-2 admin-edit-btn rounded-lg transition-all duration-200" title="編集">
                     <svg class="w-4 h-4 md:w-6 md:h-6 lg:w-7 lg:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                     </svg>
                 </button>
-                <div class="w-20 h-16 md:w-32 md:h-24 bg-gray-700 rounded overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity duration-200" onclick="playVideo('${video.filename}')" title="クリックして再生">
-                    ${video.has_thumbnail ? 
-                        `<img src="${video.thumb_url || ('thumbnails/' + video.basename + '.jpg')}" alt="サムネイル" class="w-full h-full object-cover">` :
-                        `<img src="images/default-thumbnail-small.svg" alt="デフォルトサムネイル" class="w-full h-full object-cover">`
-                    }
+                <div data-action="play" class="w-20 h-16 md:w-32 md:h-24 bg-gray-700 rounded overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity duration-200" title="クリックして再生">
+                    <img src="${escapeHtml(thumbSrc)}" alt="${video.has_thumbnail ? 'サムネイル' : 'デフォルトサムネイル'}" class="w-full h-full object-cover">
                 </div>
                 <div class="flex-1 min-w-0">
                     <div>
-                        <p class="video-title-admin font-medium text-sm md:text-base lg:text-lg mb-1 cursor-pointer hover:text-blue-400 transition-colors duration-200" title="${title}" onclick="playVideo('${video.filename}')">${truncatedTitle}</p>
-                        <p class="video-comment-admin text-xs md:text-sm" title="${comment}">${truncatedComment || 'コメントなし'}</p>
+                        <p data-action="play" class="video-title-admin font-medium text-sm md:text-base lg:text-lg mb-1 cursor-pointer hover:text-blue-400 transition-colors duration-200" title="${escapeHtml(title)}">${escapeHtml(truncatedTitle)}</p>
+                        <p class="video-comment-admin text-xs md:text-sm" title="${escapeHtml(comment)}">${escapeHtml(truncatedComment || 'コメントなし')}</p>
                     </div>
                 </div>
             </div>
         </td>
-        <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg admin-table-data whitespace-nowrap overflow-hidden text-ellipsis" data-label="再生数">${video.views.toLocaleString()}</td>
-        <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg admin-table-data whitespace-nowrap overflow-hidden text-ellipsis" data-label="いいね数">${video.likes.toLocaleString()}</td>
-        <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg admin-table-data whitespace-nowrap overflow-hidden text-ellipsis" data-label="アップロード日">${video.upload_date}</td>
-        <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg admin-table-data whitespace-nowrap overflow-hidden text-ellipsis" data-label="ファイルサイズ">${video.file_size}</td>
+        <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg admin-table-data whitespace-nowrap overflow-hidden text-ellipsis" data-label="再生数">${escapeHtml(video.views.toLocaleString())}</td>
+        <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg admin-table-data whitespace-nowrap overflow-hidden text-ellipsis" data-label="いいね数">${escapeHtml(video.likes.toLocaleString())}</td>
+        <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg admin-table-data whitespace-nowrap overflow-hidden text-ellipsis" data-label="アップロード日">${escapeHtml(video.upload_date)}</td>
+        <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg admin-table-data whitespace-nowrap overflow-hidden text-ellipsis" data-label="ファイルサイズ">${escapeHtml(video.file_size)}</td>
         <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg admin-table-data whitespace-nowrap overflow-hidden text-ellipsis" data-label="形式">
-            ${fileExtension.toUpperCase()}
+            ${escapeHtml(fileExtension.toUpperCase())}
         </td>
         <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg whitespace-nowrap overflow-hidden text-ellipsis" data-label="変換">
-            <button id="conversion-btn-${video.filename.replace(/[^a-zA-Z0-9]/g, '_')}" onclick="startVideoConversion('${video.filename}', '${video.title || 'タイトルなし'}')" class="px-3 py-1 admin-convert-btn text-xs rounded transition-colors duration-200" title="${isMp4 ? 'MP4を再エンコード' : 'MP4に変換'}">
+            <button type="button" data-action="convert" id="conversion-btn-${videoId}" class="px-3 py-1 admin-convert-btn text-xs rounded transition-colors duration-200" title="${isMp4 ? 'MP4を再エンコード' : 'MP4に変換'}">
                 ${isMp4 ? '再エンコード' : '変換'}
             </button>
         </td>
         <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg whitespace-nowrap overflow-hidden text-ellipsis" data-label="公開">
-            <button onclick="toggleVideoVisibility('${video.filename}', '${video.title || 'タイトルなし'}')" class="px-3 py-1 ${video.is_public !== false ? 'admin-public-btn' : 'admin-private-btn'} text-xs rounded transition-colors duration-200" title="${video.is_public !== false ? '非公開にする' : '公開する'}">
+            <button type="button" data-action="visibility" class="px-3 py-1 ${video.is_public !== false ? 'admin-public-btn' : 'admin-private-btn'} text-xs rounded transition-colors duration-200" title="${video.is_public !== false ? '非公開にする' : '公開する'}">
                 ${video.is_public !== false ? '公開' : '非公開'}
             </button>
         </td>
         <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg whitespace-nowrap overflow-hidden text-ellipsis" data-label="削除">
-            <button onclick="deleteVideo('${video.filename}', '${video.title || 'タイトルなし'}')" class="action-button-mobile p-1 md:p-2 admin-delete-btn rounded-lg transition-all duration-200" title="削除">
+            <button type="button" data-action="delete" class="action-button-mobile p-1 md:p-2 admin-delete-btn rounded-lg transition-all duration-200" title="削除">
                 <svg class="w-4 h-4 md:w-6 md:h-6 lg:w-7 lg:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                 </svg>
             </button>
         </td>
     `;
-    
+
+    row.querySelector('[data-action="edit"]').addEventListener('click', () => toggleEditMode(videoId));
+    row.querySelectorAll('[data-action="play"]').forEach(el => {
+        el.addEventListener('click', () => playVideo(video.filename));
+    });
+    row.querySelector('[data-action="convert"]').addEventListener('click', () => startVideoConversion(video.filename, title));
+    row.querySelector('[data-action="visibility"]').addEventListener('click', () => toggleVideoVisibility(video.filename, title));
+    row.querySelector('[data-action="delete"]').addEventListener('click', () => deleteVideo(video.filename, title));
+
     return row;
 }
 
@@ -1106,9 +1138,6 @@ window.addEventListener('load', function() {
 
 // 動画の公開/非公開切り替え
 async function toggleVideoVisibility(videoFile, videoTitle) {
-    const currentStatus = document.querySelector(`[data-filename="${videoFile}"] button[onclick*="toggleVideoVisibility"]`).textContent.trim();
-    const newStatus = currentStatus === '公開' ? '非公開' : '公開';
-    
     try {
         const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
         const response = await fetch('admin_api.php', {
@@ -1125,7 +1154,7 @@ async function toggleVideoVisibility(videoFile, videoTitle) {
             showNotification(data.message, 'success');
             
             // ボタンの状態を更新
-            const button = document.querySelector(`[data-filename="${videoFile}"] button[onclick*="toggleVideoVisibility"]`);
+            const button = findVideoRow(videoFile)?.querySelector('[data-action="visibility"]');
             if (button) {
                 const isPublic = data.is_public;
                 button.textContent = isPublic ? '公開' : '非公開';
@@ -1178,7 +1207,8 @@ async function uploadThumbnail(videoFile, basename) {
         if (data.success) {
             showNotification('サムネイルを更新しました', 'success');
             // プレビュー差し替え（キャッシュバスター付きURL）
-            document.querySelectorAll(`img[src^="thumbnails/${basename}.jpg"], img[src*="thumbnails/${basename}.jpg"]`).forEach(img => {
+            const thumbPath = CSS.escape(`thumbnails/${basename}.jpg`);
+            document.querySelectorAll(`img[src^="${thumbPath}"], img[src*="${thumbPath}"]`).forEach(img => {
                 img.src = data.thumbnail_url;
             });
             // モーダル内のプレビューも更新（hiddenのinput連動のため再描画）
