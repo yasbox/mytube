@@ -158,7 +158,7 @@ function incrementViewCount(videoFile) {
   formData.append('video_file', videoFile);
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
   if (csrf) formData.append('csrf_token', csrf);
-  if ((window.isSharedAccess || window.isNormalShareAccess) && window.sharePassword) formData.append('share_password', window.sharePassword);
+  if (window.isSharedAccess && window.sharePassword) formData.append('share_password', window.sharePassword);
   fetch('./index.php', { method: 'POST', body: formData })
     .then(r => r.json())
     .then(data => {
@@ -194,7 +194,7 @@ function toggleLike(videoFile) {
   formData.append('video_file', videoFile);
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
   if (csrf) formData.append('csrf_token', csrf);
-  if ((window.isSharedAccess || window.isNormalShareAccess) && window.sharePassword) formData.append('share_password', window.sharePassword);
+  if (window.isSharedAccess && window.sharePassword) formData.append('share_password', window.sharePassword);
   const likeButton = document.getElementById('like-button');
   const likeIcon = document.getElementById('like-icon');
   const likeCountElement = document.getElementById('like-count');
@@ -366,7 +366,7 @@ function renderVideoCard(video) {
       durationDisplay = video.duration;
     }
   }
-  const shareParam = (window.isSharedAccess || window.isNormalShareAccess) && window.sharePassword ? `&share=${encodeURIComponent(window.sharePassword)}` : '';
+  const shareParam = window.isSharedAccess && window.sharePassword ? `&share=${encodeURIComponent(window.sharePassword)}` : '';
   return `
     <div class="group overflow-hidden optimize-rendering video-card transform transition-all duration-300 rounded-lg">
       <a href="?v=${encodeURIComponent(video.video)}${shareParam}" class="block">

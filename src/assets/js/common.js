@@ -205,13 +205,11 @@ function initServerConfigFromMeta() {
     const uniqueLikeCountup = readMeta('unique-like-countup');
     const autoplayEnabled = readMeta('autoplay-enabled');
     const isShared = readMeta('is-shared-access');
-    const isNormalShare = readMeta('is-normal-share-access');
     const sharePwd = readMeta('share-password');
     if (uniqueCountup !== null) window.uniqueCountupSetting = uniqueCountup === 'true';
     if (uniqueLikeCountup !== null) window.uniqueLikeCountupSetting = uniqueLikeCountup === 'true';
     if (autoplayEnabled !== null) window.autoplayEnabledSetting = autoplayEnabled === 'true';
     if (isShared !== null) window.isSharedAccess = isShared === 'true';
-    if (isNormalShare !== null) window.isNormalShareAccess = isNormalShare === 'true';
     if (sharePwd !== null) window.sharePassword = sharePwd || null;
   } catch (_) {}
 }

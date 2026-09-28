@@ -329,21 +329,44 @@ function getOrGenerateVideoPassword($videoBasename) {
  */
 function validateVideoPassword($videoBasename, $password) {
     $metadata = getVideoMetadata($videoBasename);
-    
+
     if (!isset($metadata['share_password']) || !isset($metadata['share_password_expires'])) {
         return false;
     }
-    
+
     // パスワードが一致するかチェック
-    if ($metadata['share_password'] !== $password) {
+    if (!is_string($password) || $password === '' || !hash_equals((string)$metadata['share_password'], $password)) {
         return false;
     }
-    
+
     // 期限が切れていないかチェック
     $expires = strtotime($metadata['share_password_expires']);
     $currentTime = time();
-    
+
     return $expires > $currentTime;
+}
+
+/**
+ * 共有リンクで閲覧中の動画について、動画ファイル・サムネイルの取得を許可する（セッションに記録）
+ * @param string $videoBasename 動画のベース名（拡張子なし）
+ * @param string $password 検証済みのワンタイムパスワード
+ */
+function grantSharedMediaAccess($videoBasename, $password) {
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        return;
+    }
+    $_SESSION['shared_media'][$videoBasename] = $password;
+}
+
+/**
+ * 共有リンク経由で動画ファイル・サムネイルの取得が許可されているか
+ * （記録したパスワードを毎回検証するため、期限切れ後は取得できない）
+ * @param string $videoBasename 動画のベース名（拡張子なし）
+ * @return bool
+ */
+function hasSharedMediaAccess($videoBasename) {
+    $password = $_SESSION['shared_media'][$videoBasename] ?? null;
+    return is_string($password) && validateVideoPassword($videoBasename, $password);
 }
 
 /**

@@ -87,36 +87,22 @@ if ($currentVideoIndex === false && $currentVideo) {
 }
 
 // 共有リンク認証チェック
-$sharePassword = $_GET['share'] ?? null;
+// 有効なワンタイムパスワード付きの共有リンクの場合のみ、ログインなしで該当動画を閲覧できる
+$sharePassword = isset($_GET['share']) ? (string)$_GET['share'] : '';
 $isSharedAccess = false;
-$isNormalShareAccess = false;
 $isAuthenticatedUser = isUserAuthenticated();
 
-// shareパラメータが存在し、かつ空でない場合のみ共有アクセスとして扱う
-if (isset($_GET['share']) && $sharePassword !== null && $sharePassword !== '' && $currentVideo) {
+if (!$isAuthenticatedUser && $sharePassword !== '' && $currentVideo) {
     $currentBasename = pathinfo($currentVideo, PATHINFO_FILENAME);
-    
-    // ワンタイムパスワード付きの共有リンクの場合
     if (validateVideoPassword($currentBasename, $sharePassword)) {
         $isSharedAccess = true;
-    } else {
-        // パスワードが無効な場合は共有アクセスを拒否
-        $isSharedAccess = false;
-        $isNormalShareAccess = false;
+        // 動画ファイル・サムネイルの配信（media.php）でも閲覧を許可する
+        grantSharedMediaAccess($currentBasename, $sharePassword);
     }
-} elseif (isset($_GET['share']) && $sharePassword === '' && $currentVideo) {
-    // share= のように空のパスワードが指定されている場合は通常の共有リンクとして扱う
-    $isNormalShareAccess = true;
-}
-
-// 認証済みユーザーの場合は共有リンク制限を適用しない
-if ($isAuthenticatedUser) {
-    $isSharedAccess = false;
-    $isNormalShareAccess = false;
 }
 
 // 認証チェック（保護ON時のみ、共有リンクの場合はスキップ）
-if (!$isSharedAccess && !$isNormalShareAccess) {
+if (!$isSharedAccess) {
     requireViewerAccess();
 }
 
@@ -208,8 +194,7 @@ $pageCss = 'index';
   <meta name="unique-like-countup" content="<?= $likesUniqueCountup ? 'true' : 'false' ?>">
   <meta name="autoplay-enabled" content="<?= $autoplayEnabled ? 'true' : 'false' ?>">
   <meta name="is-shared-access" content="<?= $isSharedAccess ? 'true' : 'false' ?>">
-  <meta name="is-normal-share-access" content="<?= $isNormalShareAccess ? 'true' : 'false' ?>">
-  <meta name="share-password" content="<?= ($isSharedAccess && $sharePassword) ? htmlspecialchars($sharePassword, ENT_QUOTES, 'UTF-8') : '' ?>">
+  <meta name="share-password" content="<?= $isSharedAccess ? htmlspecialchars($sharePassword, ENT_QUOTES, 'UTF-8') : '' ?>">
 
   <!-- メインコンテンツ -->
   <?php if ($currentVideo): ?>
@@ -235,18 +220,14 @@ $pageCss = 'index';
           
           <!-- 動画情報 -->
           <div class="video-info-container md:backdrop-blur-md md:rounded-xl mb-6">
-            <?php if (($isSharedAccess || $isNormalShareAccess) && !$isAuthenticatedUser): ?>
-            <div class="mb-4 p-3 <?= $isSharedAccess ? 'bg-blue-100 border-blue-300' : 'bg-green-100 border-green-300' ?> border rounded-lg" style="<?= $isSharedAccess ? 'background-color: var(--blue-100); border-color: var(--blue-300);' : 'background-color: var(--green-100); border-color: var(--green-300);' ?>">
-              <div class="flex items-center gap-2 <?= $isSharedAccess ? 'text-blue-800' : 'text-green-800' ?>" style="<?= $isSharedAccess ? 'color: var(--blue-800);' : 'color: var(--green-800);' ?>">
+            <?php if ($isSharedAccess): ?>
+            <div class="mb-4 p-3 bg-blue-100 border-blue-300 border rounded-lg" style="background-color: var(--blue-100); border-color: var(--blue-300);">
+              <div class="flex items-center gap-2 text-blue-800" style="color: var(--blue-800);">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
                 </svg>
                 <span class="text-sm font-medium">
-                  <?php if ($isSharedAccess): ?>
-                    ワンタイムパスワード付き共有リンクでアクセス中 - この動画は認証なしで閲覧できます
-                  <?php else: ?>
-                    通常の共有リンクでアクセス中 - この動画は認証なしで閲覧できます
-                  <?php endif ?>
+                  ワンタイムパスワード付き共有リンクでアクセス中 - この動画は認証なしで閲覧できます
                 </span>
               </div>
             </div>
@@ -279,7 +260,7 @@ $pageCss = 'index';
                         <svg id="like-icon" class="w-5 h-5 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                         <span id="like-count" class="font-medium"><?= number_format($likeCount) ?></span>
                       </button>
-                      <?php if (!(($isSharedAccess || $isNormalShareAccess) && !$isAuthenticatedUser)): ?>
+                      <?php if (!$isSharedAccess): ?>
                       <button id="share-button" data-video="<?= urlencode($currentVideo) ?>" data-title="<?= htmlspecialchars($currentTitle) ?>" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer border-none bg-blue-500/10 video-button-text hover:bg-blue-500/20 hover:-translate-y-0.5 active:scale-95" style="background-color: var(--blue-500-10);">
                         <svg class="w-5 h-5 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path></svg>
                         <span class="font-medium">共有</span>
@@ -338,7 +319,7 @@ $pageCss = 'index';
           </h3>
         </div>
         <div class="flex flex-col space-y-3 md:space-y-4">
-          <?php if (($isSharedAccess || $isNormalShareAccess) && !$isAuthenticatedUser): ?>
+          <?php if ($isSharedAccess): ?>
             <!-- 共有リンクアクセス時は非表示（未認証ユーザーのみ） -->
             <div class="video-info-container rounded-lg md:rounded-xl lg:rounded-2xl p-4 md:p-6 lg:p-8 text-center">
               <div class="w-12 h-12 md:w-16 md:h-16 lg:w-20 lg:h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4" style="background-color: var(--blue-100);">
@@ -418,7 +399,7 @@ $pageCss = 'index';
   <?php endif ?>
 
   <!-- 動画一覧セクション（ページ下部） -->
-  <?php if (($isSharedAccess || $isNormalShareAccess) && !$isAuthenticatedUser): ?>
+  <?php if ($isSharedAccess): ?>
     <!-- 共有リンクアクセス時は非表示（未認証ユーザーのみ） -->
     <div class="w-full max-w-[1920px] mx-auto p-2 md:p-4 lg:p-6 xl:p-8 px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-20 3xl:px-24 <?= $currentVideo ? 'mt-8 lg:mt-12' : 'mt-4 lg:mt-8' ?>">
       <div class="video-info-container rounded-xl md:rounded-2xl lg:rounded-3xl p-8 md:p-12 lg:p-16 max-w-2xl mx-auto text-center">

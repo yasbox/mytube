@@ -15,26 +15,14 @@ function requireCsrfOnPostApi() {
 }
 require_once 'video_converter.php';
 
-// 共有リンクの認証チェック関数
+// 共有リンクの認証チェック関数（有効なワンタイムパスワードの場合のみ許可）
 function validateSharedAccess($videoFile, $sharePassword) {
-    if (empty($sharePassword) || empty($videoFile)) {
+    if (!is_string($sharePassword) || $sharePassword === '' || !is_string($videoFile) || $videoFile === '') {
         return false;
     }
-    
+
     $basename = pathinfo($videoFile, PATHINFO_FILENAME);
-    
-    // ワンタイムパスワード付きの共有リンクの場合
-    if (validateVideoPassword($basename, $sharePassword)) {
-        return true;
-    }
-    
-    // 通常の共有リンクの場合（空のパスワードは無効）
-    if ($sharePassword === '') {
-        return false;
-    }
-    
-    // ここで通常の共有リンクの検証ロジックを追加（必要に応じて）
-    return true;
+    return validateVideoPassword($basename, $sharePassword);
 }
 
 // ログインAPIエンドポイント
@@ -75,13 +63,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // 認証チェック（保護ON時のみ必要、ただし共有リンクの場合はスキップ）
+// 共有リンクで許可するのは、その動画の再生回数・いいねの更新のみ
 $isSharedAccess = false;
-$sharePassword = $_POST['share_password'] ?? $_GET['share_password'] ?? null;
-$videoFile = $_POST['video_file'] ?? $_GET['video_file'] ?? '';
-
-// 共有リンクアクセスの場合の認証チェック
-if ($sharePassword && $videoFile) {
-    $isSharedAccess = validateSharedAccess($videoFile, $sharePassword);
+$sharedActions = ['increment_view', 'toggle_like'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($_POST['action'] ?? '', $sharedActions, true)) {
+    $isSharedAccess = validateSharedAccess($_POST['video_file'] ?? '', $_POST['share_password'] ?? '');
 }
 
 // 認証が必要な場合のみチェック（共有リンクの場合はスキップ）
@@ -150,43 +136,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     
     header('Content-Type: application/json');
     echo json_encode(['success' => false]);
-    exit;
-}
-
-// 動画一覧APIエンドポイント
-if (isset($_GET['action']) && $_GET['action'] === 'list_videos') {
-    
-    $offset = intval($_GET['offset'] ?? 0);
-    $limit = intval($_GET['limit'] ?? 20);
-    
-    // Cookieからソート設定を取得
-    $sortParam = $_COOKIE['sort_preference'] ?? 'new';
-    
-    // 動画ファイル一覧を取得（ソート済み）
-    $videos = getSortedVideos($sortParam);
-    
-    $pagedVideos = array_slice($videos, $offset, $limit);
-    $result = [];
-    
-    foreach ($pagedVideos as $video) {
-        $basename = pathinfo($video, PATHINFO_FILENAME);
-        $metadata = getVideoMetadata($basename);
-        $thumb = "thumbnails/{$basename}.jpg";
-        $result[] = [
-            'video' => $video,
-            'title' => $metadata['title'],
-            'thumb' => file_exists($thumb) ? $thumb : Config::get('ui.default_thumbnail', 'images/default-thumbnail.svg'),
-            'views' => $metadata['views'],
-            'likes' => $metadata['likes'],
-            'upload_date' => $metadata['upload_date'] ? date('Y-m-d', strtotime($metadata['upload_date'])) : date('Y-m-d', filemtime("videos/$video")),
-            // APIは常に統一フォーマットを返す
-            'duration' => formatDuration($metadata['duration'] ?? null),
-            'isActive' => false, // フロントエンド側で判定
-        ];
-    }
-    
-    header('Content-Type: application/json');
-    echo json_encode($result);
     exit;
 }
 
