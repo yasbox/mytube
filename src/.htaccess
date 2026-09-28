@@ -1,7 +1,22 @@
-<FilesMatch "^data/.*$">
-  Require all denied
-</FilesMatch>
 # MyTube .htaccess 設定
+
+# 機密ファイル・実行時データへの直接アクセスを禁止
+# FilesMatch はファイル名にしか一致せず（data/ のようなパスは判定不可）、
+# Xserver では Require all denied も効かないため、mod_rewrite で拒否する
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # ドットファイル（.env, .htaccess 等）。SSL証明書の検証用 .well-known は除く
+    RewriteRule (^|/)\.(?!well-known/) - [F,L]
+    # ログ・設定ファイル
+    RewriteRule \.(env|ini|log|lock)$ - [F,L]
+    # data/ 配下（設定・パスワード・復旧端末情報）。ロゴ画像のみ公開
+    RewriteCond %{REQUEST_URI} !/data/branding/[^/]+\.png$
+    RewriteRule ^data/ - [F,L]
+    # 動画メタデータ（共有パスワードを含む）と変換中の進捗・状態ファイル
+    RewriteRule ^videos/.+\.(json|txt)$ - [F,L]
+    # アップロード途中のチャンク
+    RewriteRule ^temp_uploads/ - [F,L]
+</IfModule>
 
 # セキュリティヘッダー
 <IfModule mod_headers.c>
@@ -94,8 +109,8 @@
     </RequireAll>
 </Files>
 
-# 設定ファイルへのアクセスを禁止（data/ ディレクトリ配下を厳格に）
-<FilesMatch "^(data/|.*\.(env|ini|log|lock))$">
+# 設定ファイルへのアクセスを禁止（mod_rewrite が無い環境向けの予備）
+<FilesMatch "\.(env|ini|log|lock)$">
   Require all denied
 </FilesMatch>
 
