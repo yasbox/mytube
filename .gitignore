@@ -41,3 +41,6 @@ sessions/
 
 # キャッシュファイル
 *.cache
+
+# デプロイ先の設定（サーバーのパス・ドメインを含むため）
+deploy/instances.conf
