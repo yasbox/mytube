@@ -16,8 +16,6 @@
     RewriteRule ^videos/.+\.(json|txt)$ - [F,L]
     # アップロード途中のチャンク
     RewriteRule ^temp_uploads/ - [F,L]
-    # 動画・サムネイルは閲覧権限を確認してから配信する（media.php）
-    RewriteRule ^(videos|thumbnails)/([^/]+)$ media.php?kind=$1&name=$2 [B,QSA,L]
 </IfModule>
 
 # セキュリティヘッダー
@@ -60,11 +58,6 @@
     ExpiresByType font/woff2 "access plus 1 year"
     ExpiresByType application/font-woff "access plus 1 year"
     ExpiresByType application/font-woff2 "access plus 1 year"
-
-    # 動画・サムネイル（media.php）は閲覧権限付きのため、キャッシュはスクリプト側で制御する
-    <Files "media.php">
-        ExpiresActive Off
-    </Files>
 </IfModule>
 
 # キャッシュヘッダーの設定
