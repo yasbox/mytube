@@ -22,7 +22,9 @@ const ThemeManager = {
     // ユーザー操作による切り替え時のみ保存（toggleTheme 経由）
   },
   getCurrentTheme: function() {
-    return localStorage.getItem('theme') || 'light';
+    // 実際に適用中のテーマを返す（保存がない場合はサイトの既定テーマが適用されているため、
+    // localStorage だけで判定すると既定がダークのときに最初の切り替えが効かなかった）
+    return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
   },
   toggleTheme: function() {
     const currentTheme = this.getCurrentTheme();
