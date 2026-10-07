@@ -1124,15 +1124,13 @@ function initializeAdmin() {
     }
 }
 
-// DOMContentLoadedイベントで初期化
-document.addEventListener('DOMContentLoaded', function() {
+// 初期化は一度だけ行う（load でも再実行すると、画像の読み込み後に一覧が
+// 「新しい順」の1ページ目へ巻き戻り、スクロール監視も二重に登録されていた）
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeAdmin);
+} else {
     initializeAdmin();
-});
-
-// window.onloadイベントでも初期化（バックアップ）
-window.addEventListener('load', function() {
-    initializeAdmin();
-}); 
+}
 
 
 
