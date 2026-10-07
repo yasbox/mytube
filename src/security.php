@@ -70,7 +70,7 @@ function rememberTokenSecret(): string {
     if ((!is_string($envAdmin) || $envAdmin === '') && is_string($hash) && $hash !== '') {
         $adminPart = $hash;
     } else {
-        $adminPart = (string)Config::get('security.admin_password', 'admin123');
+        $adminPart = (string)Config::get('security.admin_password', '');
     }
     return $adminPart . '|' . (string)Config::get('security.user_password', '');
 }

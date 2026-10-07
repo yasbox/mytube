@@ -93,6 +93,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         echo json_encode(['success' => false, 'message' => 'パスワードは8文字以上で入力してください']);
         exit;
     }
+    if (trim($new) === INSECURE_DEFAULT_ADMIN_PASSWORD) {
+        header('Content-Type: application/json');
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => '既定のパスワード（admin123）は使えません']);
+        exit;
+    }
 
     // 現在のパスワード確認
     if (!verifyAdminPassword($current)) {

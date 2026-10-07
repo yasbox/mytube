@@ -35,6 +35,9 @@ $new = isset($_POST['new_password']) ? (string)$_POST['new_password'] : '';
 if (mb_strlen($new, 'UTF-8') < 8) {
   respond_and_exit(false, 'パスワードは8文字以上で入力してください');
 }
+if (trim($new) === INSECURE_DEFAULT_ADMIN_PASSWORD) {
+  respond_and_exit(false, '既定のパスワード（admin123）は使えません');
+}
 
 // クッキー照合
 $cookie = $_COOKIE['MyTube_recovery_device'] ?? '';

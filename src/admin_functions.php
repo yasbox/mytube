@@ -42,22 +42,37 @@ function isRegularUser() {
     return isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'user';
 }
 
+// 以前の env.example・既定値で使われていたパスワード（誰でも知っているため管理者パスワードとしては使わせない）
+const INSECURE_DEFAULT_ADMIN_PASSWORD = 'admin123';
+
+/**
+ * 管理者パスワードが設定されているか
+ * .env の ADMIN_PASSWORD も画面から変更したパスワードも無い、または admin123 のままなら false
+ * （その場合は管理者としてログインできない）
+ */
+function isAdminPasswordConfigured(): bool {
+    if (isAdminPasswordManagedByEnv()) {
+        $value = normalizeUserPasswordForCompare((string)Config::get('security.admin_password', ''));
+        return $value !== null && $value !== INSECURE_DEFAULT_ADMIN_PASSWORD;
+    }
+    $hash = Config::get('security.admin_password_hash');
+    return is_string($hash) && $hash !== '' && !password_verify(INSECURE_DEFAULT_ADMIN_PASSWORD, $hash);
+}
+
 /**
  * 管理者パスワードの照合
- * 優先順: 環境変数（.env の ADMIN_PASSWORD、平文）> 画面から変更したパスワード（ハッシュ）> 既定値
+ * 優先順: 環境変数（.env の ADMIN_PASSWORD、平文）> 画面から変更したパスワード（ハッシュ）
+ * どちらも無い（または admin123 のまま）場合は照合しない
  */
 function verifyAdminPassword($password): bool {
     $input = normalizeUserPasswordForCompare($password);
-    if ($input === null) {
+    if ($input === null || !isAdminPasswordConfigured()) {
         return false;
     }
     if (!isAdminPasswordManagedByEnv()) {
-        $hash = Config::get('security.admin_password_hash');
-        if (is_string($hash) && $hash !== '') {
-            return password_verify($input, $hash);
-        }
+        return password_verify($input, (string)Config::get('security.admin_password_hash'));
     }
-    $configured = normalizeUserPasswordForCompare((string)Config::get('security.admin_password', 'admin123'));
+    $configured = normalizeUserPasswordForCompare((string)Config::get('security.admin_password', ''));
     return $configured !== null && hash_equals($configured, $input);
 }
 

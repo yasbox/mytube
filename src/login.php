@@ -129,6 +129,15 @@ $isAdminPage = false;
         
         <h1 class="font-bold mb-4 md:mb-6 lg:mb-8" style="color: var(--text-primary);"><?= htmlspecialchars(Config::get('app.name', 'MyTube')) ?></h1>
         
+        <!-- 管理者パスワード未設定の案内（設定するまで管理者としてログインできない） -->
+        <?php if (!isAdminPasswordConfigured()): ?>
+        <div class="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-3 md:p-4 mb-4 md:mb-6 text-left text-sm md:text-base" style="color: var(--text-primary);">
+          管理者パスワードが設定されていないため、管理者としてログインできません。
+          サーバーの <code>.env</code> に <code>ADMIN_PASSWORD</code> を設定してください（既定値の admin123 は使えません）。
+          閲覧用のパスワードではログインできます。
+        </div>
+        <?php endif ?>
+
         <!-- エラーメッセージ -->
         <?php if ($errorMessage): ?>
         <div class="bg-red-500/20 border border-red-500/50 text-red-300 rounded-lg p-3 md:p-4 mb-4 md:mb-6">

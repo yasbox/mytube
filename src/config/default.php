@@ -50,7 +50,7 @@ return [
         'ffmpeg_path' => '/usr/bin/ffmpeg'
     ],
     'security' => [
-        'admin_password' => 'admin123',
+        // 管理者パスワードの既定値は持たない（.env の ADMIN_PASSWORD で設定する。未設定なら管理者ログイン不可）
         'admin_session_lifetime' => 86400,
         'remember_me_lifetime' => 30 * 24 * 3600,
         'remember_me_cookie_name' => 'MyTube_remember',

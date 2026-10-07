@@ -20,9 +20,10 @@
 1) 環境変数を用意
 ```bash
 cp src/env.example src/.env
-# 必要に応じて編集（例）
+# ADMIN_PASSWORD は必ず設定する（例）
 # ADMIN_PASSWORD=your_admin_password
 ```
+`ADMIN_PASSWORD` が未設定（または以前の既定値 `admin123` のまま）だと、管理者としてログインできません。
 
 2) 起動
 ```bash
