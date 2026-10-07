@@ -91,17 +91,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     
     if ($videoFile && in_array($videoFile, $videos)) {
         $basename = pathinfo($videoFile, PATHINFO_FILENAME);
-        $metadata = getVideoMetadata($basename);
-        $newViews = $metadata['views'] + 1;
-        
-        saveVideoMetadata($basename, [
-            'views' => $newViews,
-            'title' => $metadata['title'],
-            'comment' => $metadata['comment'] ?? '',
-            'likes' => $metadata['likes'] ?? 0,
-            'upload_date' => $metadata['upload_date'] ?? date('Y-m-d H:i:s')
-        ]);
-        
+        // 再生回数だけを排他して加算する（同時再生での取りこぼし・他の項目の上書きを防ぐ）
+        $newViews = Functions::incrementViews($basename);
+
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'views' => $newViews]);
         exit;
@@ -121,18 +113,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     
     if ($videoFile && in_array($videoFile, $videos)) {
         $basename = pathinfo($videoFile, PATHINFO_FILENAME);
-        $metadata = getVideoMetadata($basename);
-        
-        $newLikes = $metadata['likes'] + 1;
-        
-        saveVideoMetadata($basename, [
-            'likes' => $newLikes,
-            'title' => $metadata['title'],
-            'comment' => $metadata['comment'] ?? '',
-            'views' => $metadata['views'] ?? 0,
-            'upload_date' => $metadata['upload_date'] ?? date('Y-m-d H:i:s')
-        ]);
-        
+        // いいね数だけを排他して加算する
+        $newLikes = Functions::incrementLikes($basename);
+
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'likes' => $newLikes]);
         exit;

@@ -43,17 +43,10 @@ class FileVideoStorage implements VideoStorageInterface
     }
     
     /**
-     * 動画メタデータを保存
+     * 動画メタデータを保存（保存済みの内容に $metadata を上書きでマージする。排他して行う）
      */
     public function saveVideoMetadata(string $videoId, array $metadata): bool
     {
-        $metadataFile = $this->videosPath . $videoId . '.json';
-        $currentData = [];
-        
-        if (file_exists($metadataFile)) {
-            $currentData = json_decode(file_get_contents($metadataFile), true) ?? [];
-        }
-        
         // duration を保存する際は整数秒に統一（後方互換のためこの層でも最終防衛）
         if (array_key_exists('duration', $metadata)) {
             $duration = $metadata['duration'];
@@ -72,49 +65,95 @@ class FileVideoStorage implements VideoStorageInterface
                 $metadata['duration'] = (int)round($metadata['duration']);
             }
         }
-        $currentData = array_merge($currentData, $metadata);
-        return file_put_contents($metadataFile, json_encode($currentData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) !== false;
+        return $this->withMetadataLock(function () use ($videoId, $metadata) {
+            return $this->writeMetadataFile($videoId, array_merge($this->readMetadataFile($videoId), $metadata));
+        });
     }
-    
+
     /**
-     * 再生回数をインクリメント
+     * 再生回数をインクリメント（同時に再生されても取りこぼさないよう、排他して1だけ加算する）
      */
     public function incrementViews(string $videoId): int
     {
-        $metadata = $this->getVideoMetadata($videoId);
-        $newViews = $metadata['views'] + 1;
-        
-        $this->saveVideoMetadata($videoId, [
-            'views' => $newViews,
-            'title' => $metadata['title'],
-            'comment' => $metadata['comment'] ?? '',
-            'likes' => $metadata['likes'] ?? 0,
-            'upload_date' => $metadata['upload_date'] ?? date('Y-m-d H:i:s')
-        ]);
-        
-        return $newViews;
+        return $this->incrementCounter($videoId, 'views');
     }
-    
+
     /**
-     * いいねをトグル
+     * いいねを加算（取り消しは無い）
      */
     public function toggleLike(string $videoId, string $userId = null): array
     {
-        $metadata = $this->getVideoMetadata($videoId);
-        $newLikes = $metadata['likes'] + 1;
-        
-        $this->saveVideoMetadata($videoId, [
-            'likes' => $newLikes,
-            'title' => $metadata['title'],
-            'comment' => $metadata['comment'] ?? '',
-            'views' => $metadata['views'] ?? 0,
-            'upload_date' => $metadata['upload_date'] ?? date('Y-m-d H:i:s')
-        ]);
-        
         return [
-            'likes' => $newLikes,
+            'likes' => $this->incrementCounter($videoId, 'likes'),
             'liked' => true
         ];
+    }
+
+    /**
+     * メタデータの項目を排他して1だけ加算し、加算後の値を返す（他の項目は書き換えない）
+     */
+    private function incrementCounter(string $videoId, string $field): int
+    {
+        return $this->withMetadataLock(function () use ($videoId, $field) {
+            $data = $this->readMetadataFile($videoId);
+            $data[$field] = (int)($data[$field] ?? 0) + 1;
+            $this->writeMetadataFile($videoId, $data);
+            return $data[$field];
+        });
+    }
+
+    /**
+     * メタデータの書き換え（読み込み → 変更 → 書き込み）を排他して行う
+     * 書き換えは短時間で終わるため、全動画で1つのロックを使う
+     */
+    private function withMetadataLock(callable $fn)
+    {
+        $lock = @fopen(dirname(Config::getSettingsJsonPath()) . DIRECTORY_SEPARATOR . 'metadata.lock', 'c');
+        if ($lock) {
+            flock($lock, LOCK_EX);
+        }
+        try {
+            return $fn();
+        } finally {
+            if ($lock) {
+                flock($lock, LOCK_UN);
+                fclose($lock);
+            }
+        }
+    }
+
+    /**
+     * 保存されているメタデータをそのまま読む（表示用の補完はしない）
+     */
+    private function readMetadataFile(string $videoId): array
+    {
+        $metadataFile = $this->videosPath . $videoId . '.json';
+        if (!is_file($metadataFile)) {
+            return [];
+        }
+        $data = json_decode((string)file_get_contents($metadataFile), true);
+        return is_array($data) ? $data : [];
+    }
+
+    /**
+     * メタデータを一時ファイルに書いてから置き換える（読み込み中に書きかけを読まないように）
+     */
+    private function writeMetadataFile(string $videoId, array $data): bool
+    {
+        $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            return false;
+        }
+        $metadataFile = $this->videosPath . $videoId . '.json';
+        $tmp = $metadataFile . '.' . bin2hex(random_bytes(4)) . '.tmp';
+        if (@file_put_contents($tmp, $json) === false) {
+            return false;
+        }
+        if (!@rename($tmp, $metadataFile)) {
+            @unlink($tmp);
+            return false;
+        }
+        return true;
     }
     
     /**

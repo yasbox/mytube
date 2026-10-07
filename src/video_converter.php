@@ -334,11 +334,8 @@ function generateVideoMetadata($videoPath, $basename) {
         }
     }
     
-    // メタデータを保存
-    $metadataFile = "videos/{$basename}.json";
-    $result = file_put_contents($metadataFile, json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-    
-    if ($result !== false) {
+    // メタデータを保存（他のメタデータ更新と同じく排他して書き込む）
+    if (saveVideoMetadata($basename, $metadata)) {
         return $metadata;
     } else {
         return false;

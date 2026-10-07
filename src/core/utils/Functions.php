@@ -101,7 +101,25 @@ class Functions
         }
         return self::$storage->saveVideoMetadata($basename, $data);
     }
-    
+
+    /**
+     * 再生回数を1加算し、加算後の値を返す（同時に再生されても取りこぼさない）
+     */
+    public static function incrementViews(string $basename): int
+    {
+        self::initStorage();
+        return self::$storage->incrementViews($basename);
+    }
+
+    /**
+     * いいね数を1加算し、加算後の値を返す
+     */
+    public static function incrementLikes(string $basename): int
+    {
+        self::initStorage();
+        return self::$storage->toggleLike($basename)['likes'];
+    }
+
     /**
      * 動画ファイルの一覧を取得
      */

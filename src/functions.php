@@ -325,14 +325,13 @@ function getOrGenerateVideoPassword($videoBasename) {
     $newPassword = generateOneTimePassword();
     $expiresTime = date('Y-m-d H:i:s', $currentTime + $oneDayInSeconds);
     
-    // メタデータを更新
-    $metadata['share_password'] = $newPassword;
-    $metadata['share_password_expires'] = $expiresTime;
-    $metadata['share_password_created'] = date('Y-m-d H:i:s', $currentTime);
-    
-    // JSONファイルを更新
-    $jsonFile = __DIR__ . "/videos/{$videoBasename}.json";
-    if (file_put_contents($jsonFile, json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))) {
+    // 共有パスワードの項目だけを排他して書き込む（再生数等の同時更新を消さないように）
+    $saved = saveVideoMetadata($videoBasename, [
+        'share_password' => $newPassword,
+        'share_password_expires' => $expiresTime,
+        'share_password_created' => date('Y-m-d H:i:s', $currentTime)
+    ]);
+    if ($saved) {
         return [
             'password' => $newPassword,
             'expires' => $expiresTime,
