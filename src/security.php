@@ -187,7 +187,22 @@ function generateCSRFToken() {
 
 // CSRFトークン検証
 function verifyCSRFToken($token) {
-    return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
+    return is_string($token) && isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
+}
+
+/**
+ * CSRF トークンを確かめ、正しくなければ 403（JSON）を返して終了する（API の状態を変える処理の先頭で呼ぶ）
+ * トークンは POST なら送信内容の csrf_token、GET（アップロードの続きの確認など）なら URL の csrf_token から読む
+ */
+function requireCsrfToken(): void {
+    $token = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' ? ($_POST['csrf_token'] ?? '') : ($_GET['csrf_token'] ?? '');
+    if (verifyCSRFToken($token)) {
+        return;
+    }
+    header('Content-Type: application/json');
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'CSRF検証に失敗しました']);
+    exit;
 }
 
 // ログイン試行回数の制限

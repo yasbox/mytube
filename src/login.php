@@ -64,8 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // CSRF検証に失敗したらパスワードを照合しない
     // （他サイトから閲覧者を勝手にログインさせる攻撃を防ぐ。ページを長く開いたままで
     //   セッションが切れた場合もここに来るため、再ログインを促す文言にする）
-    $token = $_POST['csrf_token'] ?? '';
-    if (!is_string($token) || !verifyCSRFToken($token)) {
+    if (!verifyCSRFToken($_POST['csrf_token'] ?? '')) {
         $errorMessage = 'ページの有効期限が切れました。もう一度ログインしてください';
     } else {
         $password = $_POST['password'] ?? '';

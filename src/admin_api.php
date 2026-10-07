@@ -1,22 +1,9 @@
 <?php
 require_once __DIR__ . '/init_api.php';
 
-// CSRF検証（状態変更系POST）
-function requireCsrfOnPost() {
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $token = $_POST['csrf_token'] ?? '';
-        if (!verifyCSRFToken($token)) {
-            header('Content-Type: application/json');
-            http_response_code(403);
-            echo json_encode(['success' => false, 'message' => 'CSRF検証に失敗しました']);
-            exit;
-        }
-    }
-}
-
 // 管理者ログインAPI（認証チェックの前に配置）
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'admin_login') {
-    requireCsrfOnPost();
+    requireCsrfToken();
     $password = $_POST['password'] ?? '';
     $rememberMe = true; // 常にリメンバーミー機能を有効にする
     
@@ -38,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // ログアウトAPI（認証チェックの前に配置）
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'admin_logout') {
-    requireCsrfOnPost();
+    requireCsrfToken();
     logout();
     header('Content-Type: application/json');
     echo json_encode(['success' => true, 'message' => 'ログアウトしました']);
@@ -64,7 +51,7 @@ finalizeFinishedConversions();
 // 旧: リカバリーコード生成APIは廃止
 // 管理者パスワード変更API
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'change_admin_password') {
-    requireCsrfOnPost();
+    requireCsrfToken();
 
     // 環境変数で管理されている場合は変更不可
     $envAdmin = $_ENV['ADMIN_PASSWORD'] ?? $_SERVER['ADMIN_PASSWORD'] ?? getenv('ADMIN_PASSWORD') ?: null;
@@ -128,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // サムネイル差し替えAPI（画像→JPEG/長辺最大1000px/品質=軽め）
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'upload_thumbnail') {
-    requireCsrfOnPost();
+    requireCsrfToken();
     
     // 認証は既に上で確認済み
     $videoFile = $_POST['video'] ?? '';
@@ -261,7 +248,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // サイトロゴアップロード（正方形化→ロゴ/ファビコン群生成）
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'upload_brand_logo') {
-    requireCsrfOnPost();
+    requireCsrfToken();
 
     if (!isset($_FILES['brand_logo'])) {
         header('Content-Type: application/json');
@@ -373,7 +360,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // サイトロゴリセット（ユーザー生成ファイル削除）
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'reset_brand_logo') {
-    requireCsrfOnPost();
+    requireCsrfToken();
     $brandDir = __DIR__ . '/data/branding';
     $targets = [
         $brandDir . '/logo-square.png',
@@ -485,7 +472,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
 
 // 設定保存API（settings.php用）
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_settings') {
-    requireCsrfOnPost();
+    requireCsrfToken();
     $settingsJson = $_POST['settings'] ?? '';
     
     if (empty($settingsJson)) {
@@ -573,7 +560,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // 設定更新API（管理パネル用）
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_settings') {
-    requireCsrfOnPost();
+    requireCsrfToken();
 
     
     $passwordProtection = null;
@@ -766,7 +753,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // 動画削除API
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_video') {
-    requireCsrfOnPost();
+    requireCsrfToken();
     $videoFile = $_POST['video'] ?? '';
     
     if (empty($videoFile)) {
@@ -783,7 +770,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // 動画メタデータ更新API
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_metadata') {
-    requireCsrfOnPost();
+    requireCsrfToken();
     $videoFile = $_POST['video'] ?? '';
     $title = $_POST['title'] ?? '';
     $comment = $_POST['comment'] ?? '';
@@ -804,7 +791,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // 動画の公開/非公開切り替えAPI
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_visibility') {
-    requireCsrfOnPost();
+    requireCsrfToken();
     $videoFile = $_POST['video'] ?? '';
     
     if (empty($videoFile)) {
@@ -871,7 +858,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
 
 // 動画変換開始API
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'start_conversion') {
-    requireCsrfOnPost();
+    requireCsrfToken();
     $videoFile = $_POST['video'] ?? '';
     
     if (empty($videoFile)) {
@@ -904,7 +891,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
 
 // 変換停止API
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'stop_conversion') {
-    requireCsrfOnPost();
+    requireCsrfToken();
     $videoFile = $_POST['video'] ?? '';
     
     if (empty($videoFile)) {

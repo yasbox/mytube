@@ -1,18 +1,6 @@
 <?php
 require_once __DIR__ . '/init_api.php';
 
-// CSRF検証（状態変更系POST）
-function requireCsrfOnPostApi() {
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $token = $_POST['csrf_token'] ?? '';
-        if (!verifyCSRFToken($token)) {
-            header('Content-Type: application/json');
-            http_response_code(403);
-            echo json_encode(['success' => false, 'message' => 'CSRF検証に失敗しました']);
-            exit;
-        }
-    }
-}
 require_once 'video_converter.php';
 
 // 共有リンクの認証チェック関数（有効なワンタイムパスワードの場合のみ許可）
@@ -27,7 +15,7 @@ function validateSharedAccess($videoFile, $sharePassword) {
 
 // ログインAPIエンドポイント
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'login') {
-    requireCsrfOnPostApi();
+    requireCsrfToken();
     $password = $_POST['password'] ?? '';
     $rememberMe = true; // 常にリメンバーミー機能を有効にする
     
@@ -55,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // ログアウトAPIエンドポイント
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'logout') {
-    requireCsrfOnPostApi();
+    requireCsrfToken();
     logout();
     
     header('Content-Type: application/json');
@@ -84,7 +72,7 @@ if (isPasswordProtectionEnabled() && !isUserAuthenticated() && !$isSharedAccess)
 
 // 再生回数更新のAPIエンドポイント
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'increment_view') {
-    requireCsrfOnPostApi();
+    requireCsrfToken();
     
     $videoFile = $_POST['video_file'] ?? '';
     $videos = getVideoFiles();
@@ -106,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // いいね更新のAPIエンドポイント
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_like') {
-    requireCsrfOnPostApi();
+    requireCsrfToken();
     
     $videoFile = $_POST['video_file'] ?? '';
     $videos = getVideoFiles();
@@ -128,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // 共有リンク生成API
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'generate_share_link') {
-    requireCsrfOnPostApi();
+    requireCsrfToken();
     if (!isUserAuthenticated()) {
         echo json_encode(['success' => false, 'message' => '認証が必要です']);
         exit;

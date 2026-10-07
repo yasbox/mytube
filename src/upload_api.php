@@ -63,23 +63,6 @@ if (function_exists('checkRememberMe')) {
     checkRememberMe();
 }
 
-function requireCsrfTokenForRequest() {
-    $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-    $token = '';
-    if ($method === 'POST') {
-        $token = $_POST['csrf_token'] ?? '';
-    } else if ($method === 'GET') {
-        $token = $_GET['csrf_token'] ?? '';
-    }
-    if (!function_exists('verifyCSRFToken') || verifyCSRFToken($token)) {
-        return; // OK
-    }
-    header('Content-Type: application/json');
-    http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'CSRF検証に失敗しました']);
-    exit;
-}
-
 // Resumable.js の識別子（「サイズ-ファイル名」から英数字・_・- 以外を除いたもの）か
 // temp_uploads/ 配下のディレクトリ名に使うため、パス区切り等を含むものは受け付けない
 function isValidResumableIdentifier($identifier): bool {
@@ -110,7 +93,7 @@ if (!isAdmin()) {
 
 // チャンクアップロード処理
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!isset($_POST['action']) || $_POST['action'] !== 'cancel_upload')) {
-    requireCsrfTokenForRequest();
+    requireCsrfToken();
     $response = ['success' => false, 'message' => ''];
     
     
@@ -214,7 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!isset($_POST['action']) || $_POST
 
 // チャンクの存在確認（Resumable.js用）
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['resumableChunkNumber'])) {
-    requireCsrfTokenForRequest();
+    requireCsrfToken();
     $resumableIdentifier = $_GET['resumableIdentifier'] ?? '';
     $resumableChunkNumber = intval($_GET['resumableChunkNumber'] ?? 0);
     $resumableTotalSize = intval($_GET['resumableTotalSize'] ?? 0);
@@ -275,7 +258,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['resumableChunkNumber'])
 
 // アップロードキャンセルAPI
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'cancel_upload') {
-    requireCsrfTokenForRequest();
+    requireCsrfToken();
     $resumableIdentifier = $_POST['resumableIdentifier'] ?? '';
     
     if (!isValidResumableIdentifier($resumableIdentifier)) {
