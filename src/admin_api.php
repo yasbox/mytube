@@ -58,6 +58,9 @@ if (!isAdmin()) {
     exit;
 }
 
+// 終了した動画変換の後処理（進捗を見ていなくても変換後の動画が登録されるように）
+finalizeFinishedConversions();
+
 // 旧: リカバリーコード生成APIは廃止
 // 管理者パスワード変更API
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'change_admin_password') {

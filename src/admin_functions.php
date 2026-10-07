@@ -393,10 +393,11 @@ function startVideoConversion($videoFile) {
     // 新しいファイル名を生成（元のファイル名に_convert_タイムスタンプを追加）
     $timestamp = time();
     $newBasename = $basename . '_convert_' . $timestamp;
-    $outputPath = "videos/{$newBasename}.mp4";
+    // 変換中のファイルが動画一覧に出ないよう .part の名前で書き出し、成功したら .mp4 にする
+    $outputPath = "videos/{$newBasename}.mp4.part";
 
     $result = convertVideoToMp4($inputPath, $outputPath, $newBasename);
-    
+
     if ($result['success']) {
         // 変換状態を保存
         saveConversionStatus($videoFile, [
@@ -408,6 +409,7 @@ function startVideoConversion($videoFile) {
             'progress' => 0,
             'message' => '変換を開始しました',
             'temp_output_path' => $outputPath,
+            'final_output_path' => "videos/{$newBasename}.mp4",
             'new_basename' => $newBasename,
             'original_basename' => $basename,
             'is_reencode' => ($ext === 'mp4')
@@ -422,99 +424,126 @@ function startVideoConversion($videoFile) {
 // 変換進捗取得関数
 function getConversionProgress($videoFile) {
     $videos = Functions::getVideoFiles();
-    
+
     if (!in_array($videoFile, $videos)) {
         return ['success' => false, 'message' => '動画ファイルが見つかりません'];
     }
-    
+
     $conversionStatus = getConversionStatus($videoFile);
-    
+
     if ($conversionStatus['status'] === 'not_found') {
         return ['success' => false, 'message' => '変換が開始されていません'];
     }
-    
-    if ($conversionStatus['status'] === 'converting') {
-        // FFmpegの進捗を取得
-        $ffmpegProgress = getFfmpegProgress(
-            $conversionStatus['progress_file'],
-            $conversionStatus['pid'],
-            $conversionStatus['total_duration']
-        );
-        
-        // 進捗を更新
-        $conversionStatus['progress'] = $ffmpegProgress['progress'];
-        $conversionStatus['message'] = "変換中... {$ffmpegProgress['progress']}%";
-        
-        // 変換完了チェック
-        if ($ffmpegProgress['status'] === 'completed') {
-            $newBasename = $conversionStatus['new_basename'] ?? pathinfo($videoFile, PATHINFO_FILENAME);
-            $originalBasename = $conversionStatus['original_basename'] ?? pathinfo($videoFile, PATHINFO_FILENAME);
-            $mp4Path = $conversionStatus['temp_output_path'] ?? "videos/{$newBasename}.mp4";
-            
-            if (file_exists($mp4Path)) {
-                // 元のメタデータを取得（共有パスワードを含むためログには出さない）
-                $originalMetadata = Functions::getVideoMetadata($originalBasename);
 
-                // 新しいメタデータを作成（元のメタデータを複製）
-                $newMetadata = $originalMetadata;
-                $newMetadata['filename'] = $newBasename . '.mp4';
-                $newMetadata['upload_date'] = date('Y-m-d H:i:s');
-                $newMetadata['views'] = 0; // 新しい動画なので再生数は0から開始
-                $newMetadata['likes'] = 0; // 新しい動画なのでいいね数は0から開始
-                
-                // 新しいメタデータを保存
-                Functions::saveVideoMetadata($newBasename, $newMetadata);
-                error_log("New metadata created for converted video: {$newBasename}");
-                
-                // サムネイルを処理
-                $newThumbnailPath = "thumbnails/{$newBasename}.jpg";
-                
-                // 新しい動画からサムネイルを生成
-                if (!is_dir('thumbnails')) {
-                    mkdir('thumbnails', 0755, true);
-                }
-                
-                if (generateThumbnail($mp4Path, $newThumbnailPath)) {
-                    error_log("New thumbnail generated for converted video: {$newThumbnailPath}");
-                } else {
-                    error_log("Failed to generate thumbnail for converted video: {$newThumbnailPath}");
-                }
-                
-                // 進捗ファイルを削除
-                if (file_exists($conversionStatus['progress_file'])) {
-                    unlink($conversionStatus['progress_file']);
-                }
-                
-                // 変換状態ファイルを削除（完了後は不要）
-                clearConversionStatus($videoFile);
-                
-                return [
-                    'success' => true,
-                    'status' => 'completed',
-                    'progress' => 100,
-                    'message' => '変換完了'
-                ];
-            } else {
-                $conversionStatus['status'] = 'failed';
-                $conversionStatus['message'] = '変換に失敗しました';
-                
-                // 変換失敗時も状態ファイルを削除
-                clearConversionStatus($videoFile);
-            }
-        }
-        
-        // 変換中の場合のみ状態を保存
-        if ($conversionStatus['status'] === 'converting') {
+    if ($conversionStatus['status'] === 'converting') {
+        if (!isProcessRunning($conversionStatus['pid'] ?? null)) {
+            // FFmpeg が終了したので後処理（成功なら登録、失敗なら途中のファイルを削除）
+            $conversionStatus = finalizeConversion($videoFile);
+        } else {
+            $ffmpegProgress = getFfmpegProgress(
+                $conversionStatus['progress_file'],
+                $conversionStatus['pid'],
+                $conversionStatus['total_duration']
+            );
+            $conversionStatus['progress'] = $ffmpegProgress['progress'];
+            $conversionStatus['message'] = "変換中... {$ffmpegProgress['progress']}%";
             saveConversionStatus($videoFile, $conversionStatus);
         }
     }
-    
+
+    // 完了・失敗の結果は管理画面に一度返したら消す
+    if (in_array($conversionStatus['status'], ['completed', 'failed'], true)) {
+        clearConversionStatus($videoFile);
+    }
+
     return [
         'success' => true,
         'status' => $conversionStatus['status'],
         'progress' => $conversionStatus['progress'],
         'message' => $conversionStatus['message']
     ];
+}
+
+/**
+ * 終了した変換の後処理
+ * 成功（FFmpeg が最後まで出力した）なら .part を .mp4 にしてメタデータ・サムネイルを作り、
+ * 失敗なら途中のファイルを削除する。結果は状態ファイルに残す（管理画面の進捗確認に返すため）。
+ * 管理画面の進捗確認と一覧表示時の後処理（finalizeFinishedConversions）の両方から呼ばれるため排他する。
+ */
+function finalizeConversion($videoFile): array {
+    $lock = @fopen(dirname(Config::getSettingsJsonPath()) . DIRECTORY_SEPARATOR . 'conversion.lock', 'c');
+    if ($lock) {
+        flock($lock, LOCK_EX);
+    }
+    try {
+        $status = getConversionStatus($videoFile);
+        if ($status['status'] !== 'converting') {
+            // 別のリクエストが後処理を済ませた
+            return $status;
+        }
+
+        $partPath = (string)($status['temp_output_path'] ?? '');
+        $finalPath = (string)($status['final_output_path'] ?? preg_replace('/\.part$/', '', $partPath));
+        $progressFile = (string)($status['progress_file'] ?? '');
+        $newBasename = (string)($status['new_basename'] ?? pathinfo($finalPath, PATHINFO_FILENAME));
+        $succeeded = $partPath !== '' && is_file($partPath) && filesize($partPath) > 0
+            && conversionFinishedSuccessfully($progressFile);
+        if ($progressFile !== '' && is_file($progressFile)) {
+            @unlink($progressFile);
+        }
+
+        // 以前の形式（.part を使わず最初から .mp4 に出力）で始まった変換は名前を変えずに登録する
+        if ($succeeded && ($partPath === $finalPath || @rename($partPath, $finalPath))) {
+            // 元の動画のメタデータを複製（保存されている値そのもの。共有パスワードは引き継がない）
+            $originalFile = "videos/" . ($status['original_basename'] ?? '') . ".json";
+            $newMetadata = is_file($originalFile) ? (json_decode((string)file_get_contents($originalFile), true) ?: []) : [];
+            unset($newMetadata['share_password'], $newMetadata['share_password_expires'], $newMetadata['share_password_created']);
+            $newMetadata['filename'] = $newBasename . '.mp4';
+            $newMetadata['upload_date'] = date('Y-m-d H:i:s');
+            $newMetadata['views'] = 0; // 新しい動画なので再生数は0から開始
+            $newMetadata['likes'] = 0; // 新しい動画なのでいいね数は0から開始
+            Functions::saveVideoMetadata($newBasename, $newMetadata);
+
+            if (!generateThumbnail($finalPath, "thumbnails/{$newBasename}.jpg")) {
+                error_log("Failed to generate thumbnail for converted video: {$newBasename}");
+            }
+            $status = array_merge($status, ['status' => 'completed', 'progress' => 100, 'message' => '変換完了']);
+        } else {
+            if ($partPath !== '' && is_file($partPath)) {
+                @unlink($partPath);
+            }
+            $status = array_merge($status, ['status' => 'failed', 'message' => '変換に失敗しました']);
+        }
+        $status['finished_at'] = time();
+        saveConversionStatus($videoFile, $status);
+        return $status;
+    } finally {
+        if ($lock) {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+        }
+    }
+}
+
+/**
+ * 終了した変換の後処理をまとめて行う（管理画面で進捗を見ていなくても、変換後の動画が登録されるように）
+ * 一覧・管理画面の表示時に呼ぶ。完了・失敗の結果は10分たったら消す
+ */
+function finalizeFinishedConversions(): void {
+    foreach (glob('videos/*_conversion_status.json') ?: [] as $statusFile) {
+        $status = json_decode((string)@file_get_contents($statusFile), true);
+        if (!is_array($status) || empty($status['original_basename'])) {
+            continue;
+        }
+        $videoFile = $status['original_basename'] . '.mp4'; // 状態ファイルの名前はベース名から決まる
+        if (($status['status'] ?? '') === 'converting') {
+            if (!isProcessRunning($status['pid'] ?? null)) {
+                finalizeConversion($videoFile);
+            }
+        } elseif ((int)($status['finished_at'] ?? 0) < time() - 600) {
+            @unlink($statusFile);
+        }
+    }
 }
 
 // サムネイル生成関数（既に定義済みなら再定義しない）

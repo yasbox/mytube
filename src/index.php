@@ -4,10 +4,13 @@ require_once __DIR__ . '/init_web.php';
 
 // APIエンドポイントへのPOSTリクエストは既存の api.php に委譲
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    
+
     include 'api.php';
     exit;
 }
+
+// 終了した動画変換の後処理（管理画面で進捗を見ていなくても変換後の動画が一覧に出るように）
+finalizeFinishedConversions();
 
 // 共有リンクのGETリクエストの場合は、api.phpを実行せずに通常のページ処理を続行
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['share'])) {

@@ -76,8 +76,8 @@ function convertVideoToMp4($inputPath, $outputPath, $basename) {
     $cmd .= " -progress " . escapeshellarg($progressFile);
     $cmd .= " -stats_period 0.5"; // 0.5秒ごとに統計情報を出力
     
-    // 出力ファイル
-    $cmd .= " -y " . escapeshellarg($outputPath);
+    // 出力ファイル（変換中は .part の名前で書き出すため、形式を明示する）
+    $cmd .= " -f mp4 -y " . escapeshellarg($outputPath);
     
     // バックグラウンドで変換を開始
     $cmd .= " > /dev/null 2>&1 & echo $!";
@@ -123,14 +123,7 @@ function getFfmpegProgress($progressFile, $pid, $totalDuration = 0) {
     }
     
     // プロセスが実行中かチェック
-    $isRunning = false;
-    if (is_numeric($pid)) {
-        $checkCmd = "ps -p {$pid} > /dev/null 2>&1; echo $?";
-        $result = shell_exec($checkCmd);
-        $isRunning = (trim($result) === '0');
-    }
-    
-    if (!$isRunning) {
+    if (!isProcessRunning($pid)) {
         
         return ['progress' => 100, 'status' => 'completed'];
     }
@@ -233,8 +226,36 @@ function parseDuration($durationStr) {
 }
 
 /**
+ * プロセスが実行中か
+ */
+function isProcessRunning($pid): bool {
+    if (!is_numeric($pid)) {
+        return false;
+    }
+    $result = shell_exec("ps -p " . (int)$pid . " > /dev/null 2>&1; echo $?");
+    return trim((string)$result) === '0';
+}
+
+/**
+ * FFmpeg が最後まで変換を終えたか（-progress の出力が progress=end で終わっているか）
+ * 途中で失敗・中断した場合は progress=continue のまま終わる
+ */
+function conversionFinishedSuccessfully($progressFile): bool {
+    if (!is_string($progressFile) || !is_file($progressFile)) {
+        return false;
+    }
+    $last = '';
+    foreach (file($progressFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+        if (strpos($line, 'progress=') === 0) {
+            $last = trim($line);
+        }
+    }
+    return $last === 'progress=end';
+}
+
+/**
  * 変換プロセスを停止する関数
- * 
+ *
  * @param int $pid プロセスID
  */
 function stopFfmpegProcess($pid) {
