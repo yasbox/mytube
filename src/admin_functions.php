@@ -244,7 +244,6 @@ function login($password, $rememberMe = false) {
     
     // 管理者ログインが失敗した場合、一般ユーザーとしてログインを試行
     if (userLogin($password, $rememberMe)) {
-        error_log("User login successful - redirect_after_login: " . ($_SESSION['redirect_after_login'] ?? 'not set'));
         return ['success' => true, 'role' => 'user'];
     }
     
@@ -363,11 +362,7 @@ function startVideoConversion($videoFile) {
     $timestamp = time();
     $newBasename = $basename . '_convert_' . $timestamp;
     $outputPath = "videos/{$newBasename}.mp4";
-    
-    // 元のメタデータを取得（新しいメタデータの複製元として使用）
-    $originalMetadata = Functions::getVideoMetadata($basename);
-    error_log("Original metadata for conversion: {$basename}, metadata: " . json_encode($originalMetadata));
-    
+
     $result = convertVideoToMp4($inputPath, $outputPath, $newBasename);
     
     if ($result['success']) {
@@ -425,10 +420,9 @@ function getConversionProgress($videoFile) {
             $mp4Path = $conversionStatus['temp_output_path'] ?? "videos/{$newBasename}.mp4";
             
             if (file_exists($mp4Path)) {
-                // 元のメタデータを取得
+                // 元のメタデータを取得（共有パスワードを含むためログには出さない）
                 $originalMetadata = Functions::getVideoMetadata($originalBasename);
-                error_log("Original metadata for new video: {$originalBasename}, metadata: " . json_encode($originalMetadata));
-                
+
                 // 新しいメタデータを作成（元のメタデータを複製）
                 $newMetadata = $originalMetadata;
                 $newMetadata['filename'] = $newBasename . '.mp4';

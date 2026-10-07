@@ -70,35 +70,22 @@ $loginResult = null;
         }
     $password = $_POST['password'] ?? '';
     $rememberMe = true; // 常にリメンバーミー機能を有効にする
-    
-    // デバッグログ
-    error_log("Login attempt - redirect_after_login: " . ($_SESSION['redirect_after_login'] ?? 'not set'));
-    error_log("Session before login: " . json_encode($_SESSION));
-    
+
+    // セッションの内容はログに出さない（CSRF トークンや共有リンクのパスワードが含まれるため）
     $loginResult = login($password, $rememberMe);
-    
-    error_log("Login result: " . json_encode($loginResult));
-    error_log("Session after login: " . json_encode($_SESSION));
-    
+
     if ($loginResult && $loginResult['success']) {
         // ログイン成功
         // 保存されたリダイレクト先がある場合はそこに移動、なければトップページに移動
         $redirectUrl = $_SESSION['redirect_after_login'] ?? 'index.php';
-        
-        // デバッグログ
-        error_log("Login successful - redirect_after_login: " . ($_SESSION['redirect_after_login'] ?? 'not set'));
-        error_log("Redirect URL: " . $redirectUrl);
-        
+
         // リダイレクト先が安全かチェック
         if (isset($_SESSION['redirect_after_login']) && !isSafeRedirectUrl($redirectUrl)) {
             $redirectUrl = 'index.php';
-            error_log("Redirect URL changed to index.php due to security check");
         }
-        
+
         unset($_SESSION['redirect_after_login']); // セッションから削除
-        
-        error_log("About to redirect to: " . $redirectUrl);
-        
+
         // 出力バッファをクリアしてリダイレクト
         if (ob_get_level()) {
             ob_end_clean();

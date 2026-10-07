@@ -705,12 +705,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
         $updates['ui.theme'] = $uiThemeUpdate;
     }
-    
-    // デバッグログ
-    error_log('Received POST data: ' . json_encode($_POST));
-    error_log('Parsed updates: ' . json_encode($updates));
-    
 
+    // 送信内容・更新内容はログに出さない（閲覧者パスワードが含まれるため）
 
     // 設定をJSONに永続化（app/data/settings.json）
     $settingsPath = Config::getSettingsJsonPath();
@@ -727,12 +723,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
     }
 
-    // デバッグログ
-    error_log('Processing updates: ' . json_encode($updates));
-    
     // ネストキーを配列に反映
     foreach ($updates as $dotKey => $value) {
-        error_log("Setting $dotKey = $value");
         $keys = explode('.', $dotKey);
         $ref = &$current;
         foreach ($keys as $idx => $k) {
@@ -755,10 +747,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
 
-    
-    // デバッグログ
-    error_log('Current settings after update: ' . json_encode($current));
-    
     // セキュリティ: JSON書き込みは原子的に
     $json = json_encode($current, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     if ($json === false) {
@@ -793,12 +781,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             exit;
         }
     }
-    
-    error_log('Settings file updated successfully at: ' . $settingsPath);
 
-    // デバッグログ
-    error_log('Settings updated successfully. Updates: ' . json_encode($updates));
-    
     header('Content-Type: application/json');
     echo json_encode([
         'success' => true, 
