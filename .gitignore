@@ -46,3 +46,6 @@ sessions/
 
 # デプロイ先の設定（サーバーのパス・ドメインを含むため）
 deploy/instances.conf
+
+# 画面用 CSS を作るための開発用パッケージ（npm install で入る）
+node_modules/

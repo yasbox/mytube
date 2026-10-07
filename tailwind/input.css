@@ -1,0 +1,4 @@
+/* 画面用 CSS の元。`npm run build:css` で src/assets/css/tailwind.css を作る */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

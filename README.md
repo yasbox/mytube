@@ -14,6 +14,7 @@
 
 - PHP 8.2 + Apache、FFmpeg
 - Docker / Docker Compose（推奨）
+- （開発時のみ）Node.js … 画面用 CSS を作り直すときに使います（サーバーには不要）
 
 ## 使い方（Docker）
 
@@ -62,6 +63,19 @@ docker compose up -d
 - `videos/`・`thumbnails/` へのアクセスは `media.php` が閲覧権限を確認し、許可した場合のみ期限付きの専用 URL（`media/…`、6〜12時間有効）へリダイレクトします。ファイル自体は Web サーバーが静的配信するため、シーク再生にも対応します
 - パスワード保護 ON のときは、ログイン済みか、共有リンクでその動画を開いた場合のみ取得できます。非公開の動画は管理者のみです
 - 専用 URL の有効期間は `security.media_url_ttl`（秒、既定 6 時間）で変更できます
+
+## 画面のデザイン（CSS）を変えるとき
+
+- 画面の部品のスタイルには Tailwind CSS を使っています。サーバーでは CSS を作らず、手元で作った
+  `src/assets/css/tailwind.css` をリポジトリに含めて配布します
+- PHP・JS の `class` を追加・変更したら、CSS を作り直してから一緒にコミットしてください
+  （作り直さないと、新しく使ったクラスの見た目が反映されません）
+  ```bash
+  npm install          # 初回のみ（Node.js が必要）
+  npm run build:css    # src/assets/css/tailwind.css を作り直す
+  npm run watch:css    # 編集中に自動で作り直す場合
+  ```
+- 設定は `tailwind.config.js`。デプロイ時（`deploy/deploy.sh`）に作り直し忘れがないかを確認します
 
 ## 複数サイトへの反映
 

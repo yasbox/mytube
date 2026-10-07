@@ -109,33 +109,6 @@ $faviconPngVersion = is_file(__DIR__ . '/' . $userApple) ? filemtime(__DIR__ . '
   
   <?= $additionalMeta ?>
   
-  <!-- Tailwind CSS 設定を先に定義（CDN読み込み前） -->
-  <script>
-    // Tailwind CSSの設定をカスタマイズ（Preflight無効化）
-    tailwind = window.tailwind || {};
-    tailwind.config = {
-      corePlugins: {
-        preflight: false,
-      },
-      theme: {
-        extend: {
-          screens: {
-            '3xl': '1920px',
-            '4xl': '2560px',
-            '5xl': '3200px',
-          },
-          colors: {
-            'header-bg': 'var(--header-bg)',
-            'header-text': 'var(--header-text)',
-            'hamburger-line': 'var(--hamburger-line)',
-            'header-border': 'var(--header-border)',
-          }
-        }
-      }
-    };
-  </script>
-  <!-- Tailwind CSS（設定適用後に読み込み） -->
-  <script src="https://cdn.tailwindcss.com"></script>
   <!-- 共通テーマ変数 -->
   <link rel="stylesheet" href="assets/css/theme.css?v=<?= $themeCssVersion ?>">
   <!-- ヘッダー専用スタイル -->
@@ -147,7 +120,10 @@ $faviconPngVersion = is_file(__DIR__ . '/' . $userApple) ? filemtime(__DIR__ . '
   <link rel="stylesheet" href="assets/css/admin.css?v=<?= $adminCssVersion ?>">
   <?php endif ?>
   <?= $additionalStyles ?>
-  
+  <!-- Tailwind CSS（`npm run build:css` で作ったもの。tailwind.config.js 参照）
+       ほかの CSS と同じ強さのルールはこちらが勝つよう、最後に読み込む（以前の CDN 版と同じ順番） -->
+  <link rel="stylesheet" href="assets/css/tailwind.css?v=<?= getAssetVersion('assets/css/tailwind.css') ?>">
+
   <?php 
     $commonJsPath = __DIR__ . '/assets/js/common.js';
     $headerJsPath = __DIR__ . '/assets/js/header.js';

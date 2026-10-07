@@ -1,0 +1,12 @@
+{
+  "name": "mytube",
+  "private": true,
+  "description": "画面用 CSS（Tailwind CSS）を作るための開発用設定。サーバーには不要（作った CSS をリポジトリに含める）",
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.js -i tailwind/input.css -o src/assets/css/tailwind.css",
+    "watch:css": "tailwindcss -c tailwind.config.js -i tailwind/input.css -o src/assets/css/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.17"
+  }
+}

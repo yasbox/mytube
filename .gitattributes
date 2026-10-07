@@ -1,2 +1,5 @@
 # シェルスクリプトはサーバー（Linux）でも実行するため常に LF
 *.sh text eol=lf
+
+# 手元で作る画面用 CSS（npm run build:css）。GitHub の差分表示では折りたたむ
+src/assets/css/tailwind.css linguist-generated=true

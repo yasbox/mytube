@@ -43,6 +43,8 @@ deploy/deploy.sh --rollback cocotube
 
 反映前に次を表示・確認します。
 
+- 画面用 CSS（`src/assets/css/tailwind.css`）の作り直し忘れがないか（あれば中止。
+  手元で `npm install` 済みのときだけ確認し、未インストールなら警告のみ）
 - 追加されるコミットと、変更されるファイル
 - 変更される PHP ファイルの構文チェック（サーバーの CLI php を使用）
 - サーバー上で直接変更されたファイルがないか（あれば中止）

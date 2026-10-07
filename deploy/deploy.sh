@@ -82,6 +82,28 @@ if [ "$MODE" != rollback ]; then
   echo "デプロイするコミット: $(git -C "$REPO_ROOT" log -1 --format='%h %s' "$COMMIT")（$REF）"
 fi
 
+# ---- 画面用 CSS（Tailwind）の作り直し忘れがないか
+# サーバーでは CSS を作らず、リポジトリの src/assets/css/tailwind.css をそのまま使うため、
+# PHP・JS のクラスを変えたのに作り直していないと、新しいクラスの見た目が反映されない
+check_css() {
+  git -C "$REPO_ROOT" cat-file -e "$COMMIT:tailwind.config.js" 2>/dev/null || return 0   # CSS ファイル化より前のコミット
+  local cli="$REPO_ROOT/node_modules/tailwindcss/lib/cli.js" tmp ok=true
+  if [ ! -f "$cli" ] || ! command -v node >/dev/null 2>&1; then
+    warn "画面用 CSS が最新かを確認できませんでした（node と、リポジトリでの npm install が必要です）"
+    return 0
+  fi
+  tmp=$(mktemp -d)
+  git -C "$REPO_ROOT" archive "$COMMIT" src tailwind tailwind.config.js | tar -x -C "$tmp"
+  if ! (cd "$tmp" && node "$cli" -c tailwind.config.js -i tailwind/input.css -o built.css >/dev/null 2>&1) \
+    || ! cmp -s <(tr -d '\r' < "$tmp/built.css") <(tr -d '\r' < "$tmp/src/assets/css/tailwind.css"); then
+    ok=false
+  fi
+  rm -rf "$tmp"
+  $ok || die "src/assets/css/tailwind.css が PHP・JS のクラスと合っていません。npm run build:css で作り直し、コミット・push してから実行してください"
+  echo "画面用 CSS: 最新です"
+}
+[ "$MODE" = rollback ] || check_css
+
 # ---- サーバー側で実行するスクリプト（引数: モード 名前 作業ディレクトリ コミット リポジトリ名 origin付け替え可否）
 IFS= read -r -d '' REMOTE_SCRIPT <<'REMOTE' || true
 set -euo pipefail
