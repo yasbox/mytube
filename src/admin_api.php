@@ -27,7 +27,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         echo json_encode(['success' => true, 'message' => 'ログインしました', 'role' => $loginResult['role']]);
     } else {
         header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'パスワードが正しくありません']);
+        if (!empty($loginResult['locked'])) {
+            http_response_code(429);
+            header('Retry-After: ' . (int)$loginResult['retry_after']);
+        }
+        echo json_encode(['success' => false, 'message' => loginFailureMessage($loginResult)]);
     }
     exit;
 }

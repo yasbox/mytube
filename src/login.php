@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: ' . $redirectUrl);
             exit;
         }
-        $errorMessage = 'パスワードが正しくありません';
+        $errorMessage = loginFailureMessage($loginResult);
     }
 }
 

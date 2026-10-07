@@ -55,7 +55,10 @@ return [
         'remember_me_lifetime' => 30 * 24 * 3600,
         'remember_me_cookie_name' => 'MyTube_remember',
         // 動画・サムネイルの専用 URL が切り替わる間隔（秒）。発行した URL はこの1〜2倍の時間有効
-        'media_url_ttl' => 6 * 3600
+        'media_url_ttl' => 6 * 3600,
+        // ログイン試行回数の制限: この秒数の間に login_max_failures 回失敗したら、同じ秒数だけ受け付けない
+        'login_max_failures' => 10,
+        'login_lockout_seconds' => 15 * 60
     ],
     'video' => [
         'mime_types' => [

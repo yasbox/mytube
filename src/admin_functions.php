@@ -232,23 +232,39 @@ function normalizeUserPasswordForCompare($value): ?string {
     return $normalized;
 }
 
+// ログイン失敗時の表示メッセージ（login() の戻り値から作る）
+function loginFailureMessage(array $result): string {
+    if (!empty($result['locked'])) {
+        $minutes = max(1, (int)ceil(((int)($result['retry_after'] ?? 0)) / 60));
+        return "ログインの失敗が続いたため、一時的にログインを制限しています。約{$minutes}分後にもう一度お試しください";
+    }
+    return 'パスワードが正しくありません';
+}
+
 // 統合ログイン（管理者または一般ユーザー）
+// 失敗が続いた接続元は一時的にログインを受け付けない（locked / retry_after で返す）
 function login($password, $rememberMe = false) {
-    
-    
+    $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+    $wait = getLoginLockRemaining($ip);
+    if ($wait > 0) {
+        return ['success' => false, 'role' => null, 'locked' => true, 'retry_after' => $wait];
+    }
+
     // まず管理者としてログインを試行
     if (adminLogin($password, $rememberMe)) {
-        
+        recordLoginAttempt($ip, true);
         return ['success' => true, 'role' => 'admin'];
     }
-    
+
     // 管理者ログインが失敗した場合、一般ユーザーとしてログインを試行
     if (userLogin($password, $rememberMe)) {
+        recordLoginAttempt($ip, true);
         return ['success' => true, 'role' => 'user'];
     }
-    
-    
-    return ['success' => false, 'role' => null];
+
+    recordLoginAttempt($ip, false);
+    $wait = getLoginLockRemaining($ip);
+    return ['success' => false, 'role' => null, 'locked' => $wait > 0, 'retry_after' => $wait];
 }
 
 // 管理者ログアウト
