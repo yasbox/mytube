@@ -234,21 +234,66 @@ class Config
             self::$config = self::arrayMergeRecursive(self::$config, $data);
             }
 
-        // 追加: 管理者パスワードのセキュア保存ファイルを読み込み（環境変数より低優先）
+        // 管理者パスワード（画面から変更した場合の保存先）をハッシュで読み込む（環境変数より低優先）
         $securePwPath = self::getSecureAdminPasswordPath();
         if (is_readable($securePwPath)) {
             $raw = @file_get_contents($securePwPath);
-            if ($raw !== false) {
-                $pwData = json_decode($raw, true);
-                if (is_array($pwData) && isset($pwData['password']) && is_string($pwData['password'])) {
-                    if (!isset(self::$config['security']) || !is_array(self::$config['security'])) {
-                        self::$config['security'] = [];
-                    }
-                    // ここで設定した値は後続の環境変数上書きでさらに上書きされうる
-                    self::$config['security']['admin_password'] = (string)$pwData['password'];
+            $pwData = $raw !== false ? json_decode($raw, true) : null;
+            if (is_array($pwData)) {
+                if (!isset(self::$config['security']) || !is_array(self::$config['security'])) {
+                    self::$config['security'] = [];
+                }
+                if (isset($pwData['password_hash']) && is_string($pwData['password_hash']) && $pwData['password_hash'] !== '') {
+                    self::$config['security']['admin_password_hash'] = $pwData['password_hash'];
+                } elseif (isset($pwData['password']) && is_string($pwData['password']) && trim($pwData['password']) !== '') {
+                    // 旧形式（平文で保存）はハッシュに置き換えて保存し直す
+                    $hash = password_hash(trim($pwData['password']), PASSWORD_DEFAULT);
+                    unset($pwData['password']);
+                    $pwData['password_hash'] = $hash;
+                    self::writeSecureJson($securePwPath, $pwData);
+                    self::$config['security']['admin_password_hash'] = $hash;
                 }
             }
         }
+    }
+
+    /**
+     * 管理者パスワードをハッシュにして保存する（画面からの変更・復旧端末からの再設定）
+     * 照合時と同じく前後の空白は除いてからハッシュにする
+     */
+    public static function saveAdminPassword(string $password): bool
+    {
+        $hash = password_hash(trim($password), PASSWORD_DEFAULT);
+        $saved = self::writeSecureJson(self::getSecureAdminPasswordPath(), [
+            'password_hash' => $hash,
+            'updated_at' => time(),
+            'updated_ip' => $_SERVER['REMOTE_ADDR'] ?? ''
+        ]);
+        if ($saved) {
+            self::set('security.admin_password_hash', $hash);
+        }
+        return $saved;
+    }
+
+    /**
+     * data/secure 配下へ JSON を原子的に書き込む（本人のみ読み書き可）
+     */
+    private static function writeSecureJson(string $path, array $data): bool
+    {
+        $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        if ($json === false) {
+            return false;
+        }
+        $tmp = $path . '.' . bin2hex(random_bytes(4)) . '.tmp';
+        if (@file_put_contents($tmp, $json, LOCK_EX) === false) {
+            return false;
+        }
+        @chmod($tmp, 0600);
+        if (!@rename($tmp, $path)) {
+            @unlink($tmp);
+            return false;
+        }
+        return true;
     }
 
     /**

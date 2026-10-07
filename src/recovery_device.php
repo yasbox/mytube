@@ -64,22 +64,8 @@ if (!$exists) {
   respond_and_exit(false, '復旧端末ではありません');
 }
 
-// 管理者パスワードを更新
-$pwPath = Config::getSecureAdminPasswordPath();
-$dir = dirname($pwPath);
-if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
-$payload = [
-  'password' => $new,
-  'updated_at' => time(),
-  'updated_ip' => $_SERVER['REMOTE_ADDR'] ?? ''
-];
-$pwJson = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-if ($pwJson === false) {
-  respond_and_exit(false, '内部エラー（PWシリアライズ）');
-}
-$tmp = $pwPath . '.tmp';
-if (@file_put_contents($tmp, $pwJson, LOCK_EX) === false || !@rename($tmp, $pwPath)) {
-  @unlink($tmp);
+// 管理者パスワードを更新（ハッシュにして保存）
+if (!Config::saveAdminPassword($new)) {
   respond_and_exit(false, 'パスワードの保存に失敗しました');
 }
 
@@ -91,8 +77,7 @@ if ($json !== false) {
   @rename($tmp2, $path);
 }
 
-// ランタイム反映 & RememberMe無効化
-Config::set('security.admin_password', $new);
+// RememberMe無効化
 if (function_exists('clearRememberMeCookie')) { clearRememberMeCookie(); }
 
 respond_and_exit(true, 'パスワードを再設定しました。新しいパスワードでログインしてください');

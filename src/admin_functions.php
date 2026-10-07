@@ -42,15 +42,31 @@ function isRegularUser() {
     return isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'user';
 }
 
+/**
+ * 管理者パスワードの照合
+ * 優先順: 環境変数（.env の ADMIN_PASSWORD、平文）> 画面から変更したパスワード（ハッシュ）> 既定値
+ */
+function verifyAdminPassword($password): bool {
+    $input = normalizeUserPasswordForCompare($password);
+    if ($input === null) {
+        return false;
+    }
+    if (!isAdminPasswordManagedByEnv()) {
+        $hash = Config::get('security.admin_password_hash');
+        if (is_string($hash) && $hash !== '') {
+            return password_verify($input, $hash);
+        }
+    }
+    $configured = normalizeUserPasswordForCompare((string)Config::get('security.admin_password', 'admin123'));
+    return $configured !== null && hash_equals($configured, $input);
+}
+
 // 管理者ログイン
 function adminLogin($password, $rememberMe = false) {
     $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    
-    $input = normalizeUserPasswordForCompare($password) ?? '';
-    $adminPassword = (string)Config::get('security.admin_password', 'admin123');
-    $admin = normalizeUserPasswordForCompare($adminPassword) ?? '';
-    $success = ($input !== '' && $admin !== '' && hash_equals($admin, $input));
-    
+
+    $success = verifyAdminPassword($password);
+
     if ($success) {
         if (session_status() === PHP_SESSION_ACTIVE) {
             @session_regenerate_id(true);

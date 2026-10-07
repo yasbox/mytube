@@ -92,53 +92,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     // 現在のパスワード確認
-    $currentConfigured = (string)Config::get('security.admin_password', 'admin123');
-    $curNorm = normalizeUserPasswordForCompare($current) ?? '';
-    $cfgNorm = normalizeUserPasswordForCompare($currentConfigured) ?? '';
-    if ($curNorm === '' || $cfgNorm === '' || !hash_equals($cfgNorm, $curNorm)) {
+    if (!verifyAdminPassword($current)) {
         header('Content-Type: application/json');
         http_response_code(401);
         echo json_encode(['success' => false, 'message' => '現在のパスワードが正しくありません']);
         exit;
     }
 
-    // ファイルへ保存（平文。環境変数が無い環境のみ使用。アクセス権で防御）
-    $path = Config::getSecureAdminPasswordPath();
-    $dir = dirname($path);
-    if (!is_dir($dir)) {
-        @mkdir($dir, 0755, true);
-    }
-    $payload = [
-        'password' => $new,
-        'updated_at' => time(),
-        'updated_ip' => $_SERVER['REMOTE_ADDR'] ?? ''
-    ];
-    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-    if ($json === false) {
-        header('Content-Type: application/json');
-        http_response_code(500);
-        echo json_encode(['success' => false, 'message' => '内部エラー（シリアライズ失敗）']);
-        exit;
-    }
-    $tmp = $path . '.tmp';
-    $bytes = @file_put_contents($tmp, $json, LOCK_EX);
-    if ($bytes === false) {
+    // ハッシュにしてファイルへ保存（環境変数が無い環境のみ使用）
+    if (!Config::saveAdminPassword($new)) {
         header('Content-Type: application/json');
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => '設定ファイルの書き込みに失敗しました']);
         exit;
     }
-    $ok = @rename($tmp, $path);
-    if (!$ok) {
-        @unlink($tmp);
-        header('Content-Type: application/json');
-        http_response_code(500);
-        echo json_encode(['success' => false, 'message' => '設定ファイルの更新に失敗しました']);
-        exit;
-    }
 
-    // ランタイムへ反映 & RememberMe無効化
-    Config::set('security.admin_password', $new);
+    // RememberMe無効化（署名の鍵が変わるため、他の端末のログイン保持も無効になる）
     if (function_exists('clearRememberMeCookie')) {
         clearRememberMeCookie();
     }

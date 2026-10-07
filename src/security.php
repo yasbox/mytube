@@ -61,6 +61,20 @@ function checkRememberMe() {
     }
 }
 
+// リメンバーミートークンの署名に使う鍵（管理者パスワード + 閲覧者パスワード。どちらかが変わると既存のトークンは無効）
+// 管理者パスワードは、環境変数で管理している場合はその値（従来どおり）、
+// 画面から変更した場合は平文を保存していないためハッシュを使う
+function rememberTokenSecret(): string {
+    $envAdmin = $_ENV['ADMIN_PASSWORD'] ?? $_SERVER['ADMIN_PASSWORD'] ?? getenv('ADMIN_PASSWORD') ?: '';
+    $hash = Config::get('security.admin_password_hash');
+    if ((!is_string($envAdmin) || $envAdmin === '') && is_string($hash) && $hash !== '') {
+        $adminPart = $hash;
+    } else {
+        $adminPart = (string)Config::get('security.admin_password', 'admin123');
+    }
+    return $adminPart . '|' . (string)Config::get('security.user_password', '');
+}
+
 // リメンバーミートークンの生成
 function generateRememberToken($role) {
     $data = [
@@ -71,11 +85,7 @@ function generateRememberToken($role) {
     ];
     
     $jsonData = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    // HMACシークレットは管理者パスワード + パスワード（JSON）
-    $userPassword = (string)Config::get('security.user_password', '');
-    $adminPassword = (string)Config::get('security.admin_password', 'admin123');
-    $secret = $adminPassword . '|' . $userPassword;
-    $signature = hash_hmac('sha256', $jsonData, $secret);
+    $signature = hash_hmac('sha256', $jsonData, rememberTokenSecret());
     
     return base64_encode($jsonData . '.' . $signature);
 }
@@ -93,10 +103,7 @@ function validateRememberToken($token) {
         $signature = substr($decoded, $dotPos + 1);
         
         // 署名を検証
-        $userPassword = (string)Config::get('security.user_password', '');
-        $adminPassword = (string)Config::get('security.admin_password', 'admin123');
-        $secret = $adminPassword . '|' . $userPassword;
-        $expectedSignature = hash_hmac('sha256', $jsonData, $secret);
+        $expectedSignature = hash_hmac('sha256', $jsonData, rememberTokenSecret());
         if (!hash_equals($expectedSignature, $signature)) {
             return false;
         }
