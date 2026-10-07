@@ -143,7 +143,10 @@ function initVideoPlayer() {
       }
     }
   }
-  videoPlayer.addEventListener('play', function() {
+  // 再生数は、実際に再生が始まったときにページを開くごとに1回だけ数える
+  // （'play' だと一時停止→再開・シーク（スマホでは一時停止→再開になる）・見直しのたびに数えていた。
+  //   'playing' はブラウザに止められた自動再生では発生しないため、見ていないのに数えることもない）
+  videoPlayer.addEventListener('playing', function() {
     if (currentVideo && !hasCountedView) incrementViewCount(currentVideo);
   });
   setTimeout(attemptAutoplay, 100);
@@ -153,6 +156,7 @@ function incrementViewCount(videoFile) {
   const uniqueCount = window.uniqueCountupSetting;
   const viewCountKey = `viewed_${videoFile}`;
   if (uniqueCount && sessionStorage.getItem(viewCountKey)) { hasCountedView = true; return; }
+  hasCountedView = true; // 応答を待つ間に再生し直しても二重に送らない
   const formData = new FormData();
   formData.append('action', 'increment_view');
   formData.append('video_file', videoFile);
@@ -166,7 +170,7 @@ function incrementViewCount(videoFile) {
         const viewCountElement = document.getElementById('view-count');
         if (viewCountElement) viewCountElement.textContent = data.views.toLocaleString();
         updateSidebarViewCount(videoFile, data.views);
-        if (uniqueCount) { sessionStorage.setItem(viewCountKey, 'true'); hasCountedView = true; }
+        if (uniqueCount) sessionStorage.setItem(viewCountKey, 'true'); // 制限 ON のときは同じタブの間は数えない
       } else {
         showNotification('再生数の更新に失敗しました', 'error');
       }
