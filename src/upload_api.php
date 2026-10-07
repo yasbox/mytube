@@ -465,59 +465,6 @@ function cleanupStaleUploadFiles() {
 }
 
 /**
- * サムネイルを生成
- */
-if (!function_exists('uploadapi_generate_thumbnail')) {
-    function uploadapi_generate_thumbnail($videoPath, $basename) {
-        $baseDir = __DIR__;
-        $thumbDir = $baseDir . DIRECTORY_SEPARATOR . 'thumbnails';
-        if (!is_dir($thumbDir)) {
-            @mkdir($thumbDir, 0755, true);
-        }
-        $thumbnailPath = $thumbDir . DIRECTORY_SEPARATOR . $basename . '.jpg';
-        // 動画パスを絶対パスへ
-        $videoAbs = $videoPath;
-        if (!preg_match('/^\//', $videoAbs) && !preg_match('/^[A-Za-z]:\\\\/', $videoAbs)) {
-            $videoAbs = $baseDir . DIRECTORY_SEPARATOR . ltrim($videoAbs, '/\\');
-        }
-        // shell_exec が使えない環境では生成不可
-        if (!function_exists('shell_exec')) {
-            return false;
-        }
-        // FFmpeg バイナリの決定（Config優先）
-        $ffmpegBin = (string)Config::get('storage.ffmpeg_path', 'ffmpeg');
-
-        // 生成試行（シーク位置と -ss の位置を変えて複数試す）
-        $vf = "scale='if(gte(iw,ih),min(iw,1000),-2)':'if(gte(iw,ih),-2,min(ih,1000))'";
-        $timeCandidates = ['00:00:01', '00:00:03', '00:00:00.500'];
-        foreach ($timeCandidates as $ts) {
-            // 1) 先頭シーク（高速）
-            $cmd1 = escapeshellarg($ffmpegBin) . ' -y -ss ' . escapeshellarg($ts) . ' -i ' . escapeshellarg($videoAbs)
-                . ' -frames:v 1 -vf ' . escapeshellarg($vf) . ' ' . escapeshellarg($thumbnailPath) . ' 2>&1';
-            @shell_exec($cmd1);
-            if (@is_file($thumbnailPath) && @filesize($thumbnailPath) > 0) {
-                @chmod($thumbnailPath, 0644);
-                return true;
-            }
-            // 2) 後段シーク（精確）
-            $cmd2 = escapeshellarg($ffmpegBin) . ' -y -i ' . escapeshellarg($videoAbs) . ' -ss ' . escapeshellarg($ts)
-                . ' -frames:v 1 -vf ' . escapeshellarg($vf) . ' ' . escapeshellarg($thumbnailPath) . ' 2>&1';
-            @shell_exec($cmd2);
-            if (@is_file($thumbnailPath) && @filesize($thumbnailPath) > 0) {
-                @chmod($thumbnailPath, 0644);
-                return true;
-            }
-        }
-        // フォールバック: 既存のサムネイル関数があれば明示パスで呼び出す
-        if (function_exists('generateThumbnail')) {
-            $ok = @generateThumbnail($videoAbs, $thumbnailPath);
-            if ($ok) { return true; }
-        }
-        return false;
-    }
-}
-
-/**
  * 一時ファイルを削除
  */
 function cleanupTempFiles($tempDir) {

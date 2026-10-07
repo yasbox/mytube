@@ -555,29 +555,6 @@ function finalizeFinishedConversions(): void {
     }
 }
 
-// サムネイル生成関数（既に定義済みなら再定義しない）
-if (!function_exists('generateThumbnail')) {
-    function generateThumbnail($videoPath, $thumbnailPath) {
-        // thumbnailsディレクトリが存在しない場合は作成
-        $thumbnailDir = dirname($thumbnailPath);
-        if (!is_dir($thumbnailDir)) {
-            mkdir($thumbnailDir, 0755, true);
-        }
-
-        // 長辺1000pxへ縮小（比率維持／アップスケールなし）
-        $vf = "scale='if(gte(iw,ih),min(iw,1000),-2)':'if(gte(iw,ih),-2,min(ih,1000))'";
-        $ffmpeg = (string)Config::get('storage.ffmpeg_path', '/usr/bin/ffmpeg');
-        $ffmpegCmd = $ffmpeg
-            . ' -y -ss 00:00:01'
-            . ' -i ' . escapeshellarg($videoPath)
-            . ' -vframes 1 -vf ' . escapeshellarg($vf)
-            . ' ' . escapeshellarg($thumbnailPath) . ' 2>&1';
-        shell_exec($ffmpegCmd);
-
-        return file_exists($thumbnailPath) && filesize($thumbnailPath) > 0;
-    }
-}
-
 // 動画の公開/非公開切り替え関数
 function toggleVideoVisibility($videoFile) {
     $videos = Functions::getVideoFiles();

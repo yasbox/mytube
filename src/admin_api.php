@@ -235,15 +235,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $outputPath = $thumbDir . '/' . $basename . '.jpg';
     
     // FFmpegで長辺1000pxへ縮小（比率維持／アップスケールなし）＋ JPEG化（軽め品質）
-    $ffmpeg = (string)Config::get('storage.ffmpeg_path', '/usr/bin/ffmpeg');
     // width>=height の場合は width=min(iw,1000)、高さは自動（偶数）。縦長は高さ=min(ih,1000)
     $vf = "scale='if(gte(iw,ih),min(iw,1000),-2)':'if(gte(iw,ih),-2,min(ih,1000))'";
-    $cmd = $ffmpeg
-        . ' -y -i ' . escapeshellarg($tempPath)
-        . ' -vf ' . escapeshellarg($vf)
-        . ' -q:v 6 '
-        . escapeshellarg($outputPath) . ' 2>&1';
-    $out = shell_exec($cmd);
+    runFfmpeg(['-y', '-i', $tempPath, '-vf', $vf, '-q:v', '6', $outputPath]);
     
     // 一時ファイル削除
     @unlink($tempPath);
@@ -344,17 +338,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $a192 = $brandDir . '/android-chrome-192x192.png';
     $a512 = $brandDir . '/android-chrome-512x512.png';
 
-    $ffmpeg = (string)Config::get('storage.ffmpeg_path', '/usr/bin/ffmpeg');
     // 正方形512px
     $vfSquare = "crop='min(iw,ih)':'min(iw,ih)',scale=512:512:flags=lanczos";
-    $cmd1 = $ffmpeg . ' -y -i ' . escapeshellarg($tempPath) . ' -vf ' . escapeshellarg($vfSquare) . ' -map_metadata -1 ' . escapeshellarg($square) . ' 2>&1';
-    $out1 = shell_exec($cmd1);
+    runFfmpeg(['-y', '-i', $tempPath, '-vf', $vfSquare, '-map_metadata', '-1', $square]);
 
     // 派生生成
-    $gen = function($in, $w, $h, $out) use ($ffmpeg) {
+    $gen = function($in, $w, $h, $out) {
         $vf = 'scale=' . (int)$w . ':' . (int)$h . ':flags=lanczos';
-        $cmd = $ffmpeg . ' -y -i ' . escapeshellarg($in) . ' -vf ' . escapeshellarg($vf) . ' -map_metadata -1 ' . escapeshellarg($out) . ' 2>&1';
-        return shell_exec($cmd);
+        return runFfmpeg(['-y', '-i', $in, '-vf', $vf, '-map_metadata', '-1', $out]);
     };
     $gen($square, 48, 48, $logo48);
     $gen($square, 96, 96, $logo96);

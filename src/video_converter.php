@@ -15,6 +15,87 @@ require_once 'functions.php';
 require_once 'admin_functions.php';
 
 /**
+ * FFmpeg のコマンド行を組み立てる（実行ファイルのパスも引数もすべてシェル用にエスケープする）
+ *
+ * @param array $args FFmpeg に渡す引数（例: ['-i', $path]）
+ * @return string コマンド行
+ */
+function ffmpegCommand(array $args) {
+    $parts = [(string)Config::get('storage.ffmpeg_path', '/usr/bin/ffmpeg')];
+    foreach ($args as $arg) {
+        $parts[] = (string)$arg;
+    }
+    return implode(' ', array_map('escapeshellarg', $parts));
+}
+
+/**
+ * FFmpeg を実行して終わるまで待ち、出力（エラー出力を含む）を返す
+ *
+ * @param array $args FFmpeg に渡す引数
+ * @return string FFmpeg の出力
+ */
+function runFfmpeg(array $args) {
+    return (string)shell_exec(ffmpegCommand($args) . ' 2>&1');
+}
+
+/**
+ * 動画の長さ（秒）を調べる。分からなければ 0
+ *
+ * @param string $videoPath 動画ファイルのパス
+ * @return float 秒数
+ */
+function getVideoDurationSeconds($videoPath) {
+    if (preg_match('/Duration: (\d+):(\d{2}):(\d{2}(?:\.\d+)?)/', runFfmpeg(['-i', $videoPath]), $matches)) {
+        return (int)$matches[1] * 3600 + (int)$matches[2] * 60 + (float)$matches[3];
+    }
+    return 0;
+}
+
+/**
+ * 動画からサムネイル（JPEG。長辺1000pxまで縮小・比率維持・拡大はしない）を作る
+ * アップロード時・変換後の両方で使う。1秒の位置の画面を使い、短い動画などで取れなければもっと前の位置で試す
+ *
+ * @param string $videoPath 動画ファイルのパス
+ * @param string $thumbnailPath 作成するサムネイルのパス
+ * @return bool 作成できたか
+ */
+function generateThumbnail($videoPath, $thumbnailPath) {
+    $thumbnailDir = dirname($thumbnailPath);
+    if (!is_dir($thumbnailDir)) {
+        @mkdir($thumbnailDir, 0755, true);
+    }
+    $vf = "scale='if(gte(iw,ih),min(iw,1000),-2)':'if(gte(iw,ih),-2,min(ih,1000))'";
+    foreach (['00:00:01', '00:00:00.500', '00:00:00'] as $position) {
+        runFfmpeg(['-y', '-ss', $position, '-i', $videoPath, '-frames:v', '1', '-vf', $vf, $thumbnailPath]);
+        clearstatcache(true, $thumbnailPath);
+        if (is_file($thumbnailPath) && filesize($thumbnailPath) > 0) {
+            @chmod($thumbnailPath, 0644);
+            return true;
+        }
+    }
+    // 取り出せなかったときに残る空のファイルは消す（一覧で壊れた画像として表示されないように）
+    if (is_file($thumbnailPath) && filesize($thumbnailPath) === 0) {
+        @unlink($thumbnailPath);
+    }
+    return false;
+}
+
+/**
+ * コマンドを裏で動かし、終わるのを待たずにプロセス ID を返す（始められなければ null）
+ * 動画の変換に使う（sh のある Linux などの環境が前提）
+ *
+ * @param string $command コマンド行（引数はエスケープ済みのもの）
+ * @return int|null プロセス ID
+ */
+function startBackgroundProcess($command) {
+    if (PHP_OS_FAMILY === 'Windows') {
+        return null;
+    }
+    $pid = trim((string)shell_exec($command . ' > /dev/null 2>&1 & echo $!'));
+    return ctype_digit($pid) ? (int)$pid : null;
+}
+
+/**
  * 動画をMP4に変換する関数（進捗追跡付き）
  * 
  * @param string $inputPath 入力ファイルのパス
@@ -23,79 +104,44 @@ require_once 'admin_functions.php';
  * @return array 変換結果
  */
 function convertVideoToMp4($inputPath, $outputPath, $basename) {
-    // ローカルログファイル出力は無効化
-    
     $ffmpeg = (string)Config::get('storage.ffmpeg_path', '/usr/bin/ffmpeg');
     if (!file_exists($ffmpeg)) {
-        // ログ出力は行わない
         return ['success' => false, 'message' => 'FFmpegが見つかりません'];
     }
-    
-    // 動画の総時間を事前に取得
-    $durationCmd = $ffmpeg . " -i " . escapeshellarg($inputPath) . " 2>&1 | grep 'Duration' | cut -d ' ' -f 4 | sed s/,//";
-    $durationOutput = shell_exec($durationCmd);
-    $totalDuration = 0;
-    
-    if ($durationOutput) {
-        $durationStr = trim($durationOutput);
-        $totalDuration = parseDuration($durationStr);
-    } else {
-        
-    }
-    
+
+    // 動画の総時間を事前に取得（進捗の計算に使う）
+    $totalDuration = getVideoDurationSeconds($inputPath);
+
     // 変換開始時刻を記録
     $startTime = time();
-    
+
     // 進捗ファイルのパス
     $progressFile = "videos/{$basename}_progress.txt";
-    
-    // 変換コマンドの構築（進捗出力付き）
-    $cmd = $ffmpeg . " -i " . escapeshellarg($inputPath);
-    
-    // 動画コーデック設定
-    $videoCodec = (string)Config::get('video.conversion.codec', 'libx264');
-    $videoPreset = (string)Config::get('video.conversion.preset', 'medium');
-    $videoCrf = (string)Config::get('video.conversion.crf', '23');
-    $cmd .= " -c:v " . $videoCodec;
-    $cmd .= " -preset " . $videoPreset;
-    $cmd .= " -crf " . $videoCrf;
-    
-    // 音声コーデック設定
-    $audioCodec = (string)Config::get('video.conversion.audio_codec', 'aac');
-    $audioBitrate = (string)Config::get('video.conversion.audio_bitrate', '128k');
-    $cmd .= " -c:a " . $audioCodec;
-    $cmd .= " -b:a " . $audioBitrate;
-    
+
+    // 変換コマンドの構築（コーデック等の設定値もエスケープして渡す）
+    $args = [
+        '-i', $inputPath,
+        '-c:v', (string)Config::get('video.conversion.codec', 'libx264'),
+        '-preset', (string)Config::get('video.conversion.preset', 'medium'),
+        '-crf', (string)Config::get('video.conversion.crf', '23'),
+        '-c:a', (string)Config::get('video.conversion.audio_codec', 'aac'),
+        '-b:a', (string)Config::get('video.conversion.audio_bitrate', '128k'),
+    ];
     // Web最適化
-    $webOptimize = (bool)Config::get('video.conversion.web_optimize', true);
-    if ($webOptimize) {
-        $cmd .= " -movflags +faststart";
+    if ((bool)Config::get('video.conversion.web_optimize', true)) {
+        array_push($args, '-movflags', '+faststart');
     }
-    
-    // 進捗出力を追加（より詳細な情報を取得）
-    $cmd .= " -progress " . escapeshellarg($progressFile);
-    $cmd .= " -stats_period 0.5"; // 0.5秒ごとに統計情報を出力
-    
+    // 進捗出力（0.5秒ごと）
+    array_push($args, '-progress', $progressFile, '-stats_period', '0.5');
     // 出力ファイル（変換中は .part の名前で書き出すため、形式を明示する）
-    $cmd .= " -f mp4 -y " . escapeshellarg($outputPath);
-    
+    array_push($args, '-f', 'mp4', '-y', $outputPath);
+
     // バックグラウンドで変換を開始
-    $cmd .= " > /dev/null 2>&1 & echo $!";
-    
-    // デバッグ用にコマンドをログ出力
-    
-    
-    // 変換プロセスを開始
-    $pid = shell_exec($cmd);
-    $pid = trim($pid);
-    
-    
-    
-    if (empty($pid) || !is_numeric($pid)) {
-        
+    $pid = startBackgroundProcess(ffmpegCommand($args));
+    if ($pid === null) {
         return ['success' => false, 'message' => '変換プロセスの開始に失敗しました'];
     }
-    
+
     return [
         'success' => true,
         'message' => '変換を開始しました',
@@ -227,12 +273,17 @@ function parseDuration($durationStr) {
 
 /**
  * プロセスが実行中か
+ * PHP の posix 拡張があればシェルを使わずに確かめる（シグナル 0 は「送らずに存在だけ確かめる」の意味）。
+ * 無い環境では ps コマンドで確かめる
  */
 function isProcessRunning($pid): bool {
-    if (!is_numeric($pid)) {
+    if (!is_numeric($pid) || (int)$pid <= 0) {
         return false;
     }
-    $result = shell_exec("ps -p " . (int)$pid . " > /dev/null 2>&1; echo $?");
+    if (function_exists('posix_kill')) {
+        return posix_kill((int)$pid, 0);
+    }
+    $result = shell_exec('ps -p ' . (int)$pid . ' > /dev/null 2>&1; echo $?');
     return trim((string)$result) === '0';
 }
 
@@ -259,9 +310,14 @@ function conversionFinishedSuccessfully($progressFile): bool {
  * @param int $pid プロセスID
  */
 function stopFfmpegProcess($pid) {
-    if (is_numeric($pid)) {
-        shell_exec("kill {$pid} 2>/dev/null");
+    if (!is_numeric($pid) || (int)$pid <= 0) {
+        return;
     }
+    if (function_exists('posix_kill')) {
+        posix_kill((int)$pid, 15); // 15 = SIGTERM（終了を依頼する）
+        return;
+    }
+    shell_exec('kill ' . (int)$pid . ' 2>/dev/null');
 }
 
 /**
@@ -291,9 +347,7 @@ function generateVideoMetadata($videoPath, $basename) {
     }
     
     // FFmpegを使用して動画情報を取得
-    $ffmpeg = (string)Config::get('storage.ffmpeg_path', '/usr/bin/ffmpeg');
-    $cmd = $ffmpeg . " -i " . escapeshellarg($videoPath) . " 2>&1";
-    $output = shell_exec($cmd);
+    $output = runFfmpeg(['-i', $videoPath]);
     
     
     
