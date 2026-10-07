@@ -588,6 +588,24 @@ video {
   }
 }
 
+@media (min-width: 1920px) {
+  .container {
+    max-width: 1920px;
+  }
+}
+
+@media (min-width: 2560px) {
+  .container {
+    max-width: 2560px;
+  }
+}
+
+@media (min-width: 3200px) {
+  .container {
+    max-width: 3200px;
+  }
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -3121,5 +3139,27 @@ video {
   .\32xl\:px-20 {
     padding-left: 5rem;
     padding-right: 5rem;
+  }
+}
+
+@media (min-width: 1920px) {
+  .\33xl\:w-1\/4 {
+    width: 25%;
+  }
+
+  .\33xl\:px-24 {
+    padding-left: 6rem;
+    padding-right: 6rem;
+  }
+}
+
+@media (min-width: 2560px) {
+  .\34xl\:w-1\/5 {
+    width: 20%;
+  }
+
+  .\34xl\:px-32 {
+    padding-left: 8rem;
+    padding-right: 8rem;
   }
 }
