@@ -66,6 +66,16 @@ function formatFileSize($bytes) {
     return Functions::formatFileSize($bytes);
 }
 
+/**
+ * CSS・JS・画像の URL に付けるバージョン（ファイルの更新日時。更新するとブラウザのキャッシュが切り替わる）
+ * @param string $filePath src からの相対パス（例: 'assets/js/admin.js'）
+ * @return int|string 更新日時。ファイルが無ければ '1.0.0'
+ */
+function getAssetVersion($filePath) {
+    $fullPath = __DIR__ . '/' . $filePath;
+    return file_exists($fullPath) ? filemtime($fullPath) : '1.0.0';
+}
+
 function getAdminVideoList() {
     return Functions::getAdminVideoList();
 }

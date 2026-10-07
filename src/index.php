@@ -174,8 +174,7 @@ $pageCss = 'index';
 <!DOCTYPE html>
 <html lang="ja">
   <?php 
-    $indexJsPath = __DIR__ . '/assets/js/index-page.js';
-    $indexJsVersion = file_exists($indexJsPath) ? filemtime($indexJsPath) : '1.0.0';
+    $indexJsVersion = getAssetVersion('assets/js/index-page.js');
     $additionalScripts = (
       ($additionalScripts ?? '') .
       "\n  <script src=\"assets/js/index-page.js?v={$indexJsVersion}\" defer></script>"

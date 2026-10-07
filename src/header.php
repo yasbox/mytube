@@ -41,17 +41,6 @@ if ($isLoggedIn && $isAdmin) {
 // 現在のファイル名を取得
 $currentFile = basename($_SERVER['PHP_SELF']);
 
-// ロゴ画像のバージョン管理を追加
-if (!function_exists('getAssetVersion')) {
-  function getAssetVersion($filePath)
-  {
-    $fullPath = __DIR__ . '/' . $filePath;
-    if (file_exists($fullPath)) {
-      return filemtime($fullPath);
-    }
-    return '1.0.0'; // デフォルトバージョン
-  }
-}
 $userLogo48Rel = 'data/branding/logo-48.png';
 $logoPathForTag = is_file(__DIR__ . '/' . $userLogo48Rel) ? $userLogo48Rel : 'images/logo.png';
 $logoVersion = file_exists(__DIR__ . '/' . $logoPathForTag) ? filemtime(__DIR__ . '/' . $logoPathForTag) : '1.0.0';

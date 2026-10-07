@@ -25,18 +25,6 @@ $additionalScripts = $additionalScripts ?? '';
 $currentVideo = $currentVideo ?? null;
 $pageCss = $pageCss ?? 'style'; // デフォルトはstyle.cssのみ
 
-// アセットファイルのバージョン取得（共通関数を使用）
-// 関数が存在しない場合のフォールバック
-if (!function_exists('getAssetVersion')) {
-    function getAssetVersion($filePath) {
-        $fullPath = __DIR__ . '/' . $filePath;
-        if (file_exists($fullPath)) {
-            return filemtime($fullPath);
-        }
-        return '1.0.0'; // デフォルトバージョン
-    }
-}
-
 $themeCssVersion = getAssetVersion('assets/css/theme.css');
 $headerCssVersion = getAssetVersion('assets/css/header.css');
 $cssVersion = getAssetVersion('assets/css/style.css');
@@ -124,13 +112,7 @@ $faviconPngVersion = is_file(__DIR__ . '/' . $userApple) ? filemtime(__DIR__ . '
        ほかの CSS と同じ強さのルールはこちらが勝つよう、最後に読み込む（以前の CDN 版と同じ順番） -->
   <link rel="stylesheet" href="assets/css/tailwind.css?v=<?= getAssetVersion('assets/css/tailwind.css') ?>">
 
-  <?php 
-    $commonJsPath = __DIR__ . '/assets/js/common.js';
-    $headerJsPath = __DIR__ . '/assets/js/header.js';
-    $commonJsVersion = file_exists($commonJsPath) ? filemtime($commonJsPath) : '1.0.0';
-    $headerJsVersion = file_exists($headerJsPath) ? filemtime($headerJsPath) : '1.0.0';
-  ?>
-  <script src="assets/js/common.js?v=<?= $commonJsVersion ?>" defer></script>
-  <script src="assets/js/header.js?v=<?= $headerJsVersion ?>" defer></script>
+  <script src="assets/js/common.js?v=<?= getAssetVersion('assets/js/common.js') ?>" defer></script>
+  <script src="assets/js/header.js?v=<?= getAssetVersion('assets/js/header.js') ?>" defer></script>
   <?= $additionalScripts ?>
 </head> 

@@ -204,8 +204,7 @@ $isAdminPage = true;
   <meta name="upload-chunk-bytes" content="<?= (int)Config::get('features.upload.chunk_size_bytes', 2 * 1024 * 1024) ?>">
   <!-- Resumable.jsライブラリとアップロード用スクリプト -->
   <script src="assets/js/resumable.js" defer></script>
-  <?php $uploadJsPath = __DIR__ . '/assets/js/upload.js'; $uploadJsVersion = file_exists($uploadJsPath) ? filemtime($uploadJsPath) : '1.0.0'; ?>
-  <script src="assets/js/upload.js?v=<?= $uploadJsVersion ?>" defer></script>
+  <script src="assets/js/upload.js?v=<?= getAssetVersion('assets/js/upload.js') ?>" defer></script>
 <?php include 'footer.php'; ?>
 </body>
 

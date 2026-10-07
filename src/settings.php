@@ -16,19 +16,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 $pageTitle = Config::get('app.name', 'MyTube') . ' - 設定';
 $pageCss = 'admin'; // admin.cssを読み込む
 
-// admin.jsファイルのバージョン取得（共通関数を使用）
-// 関数が存在しない場合のフォールバック
-if (!function_exists('getAssetVersion')) {
-    function getAssetVersion($filePath)
-    {
-        $fullPath = __DIR__ . '/' . $filePath;
-        if (file_exists($fullPath)) {
-            return filemtime($fullPath);
-        }
-        return '1.0.0'; // デフォルトバージョン
-    }
-}
-
 $adminJsVersion = getAssetVersion('assets/js/admin.js');
 $settingsJsVersion = getAssetVersion('assets/js/settings.js');
 $additionalScripts = '<script src="assets/js/admin.js?v=' . $adminJsVersion . '" defer></script>';
