@@ -554,62 +554,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // 通知表示機能（積み重ね版）
-    function showNotification(message, type = 'info') {
-        // 通知コンテナを取得または作成
-        let notificationContainer = document.getElementById('notification-container');
-        if (!notificationContainer) {
-            notificationContainer = document.createElement('div');
-            notificationContainer.id = 'notification-container';
-            notificationContainer.className = 'fixed top-4 right-4 z-[10001] space-y-2';
-            notificationContainer.style.zIndex = '10001';
-            document.body.appendChild(notificationContainer);
-        }
-        
-        // 新しい通知を作成
-        const notification = document.createElement('div');
-        notification.className = `notification px-4 py-3 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full`;
-        
-        // タイプに応じてスタイルを設定
-        switch (type) {
-            case 'success':
-                notification.className += ' bg-green-500 text-white';
-                break;
-            case 'error':
-                notification.className += ' bg-red-500 text-white';
-                break;
-            case 'warning':
-                notification.className += ' bg-yellow-500 text-white';
-                break;
-            default:
-                notification.className += ' bg-blue-500 text-white';
-        }
-        
-        notification.textContent = message;
-        
-        // 通知コンテナに追加
-        notificationContainer.appendChild(notification);
-        
-        // アニメーション表示
-        setTimeout(() => {
-            notification.classList.remove('translate-x-full');
-        }, 100);
-        
-        // 3秒後に自動削除
-        setTimeout(() => {
-            notification.classList.add('translate-x-full');
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
-                }
-                // 通知コンテナが空になったら削除
-                if (notificationContainer.children.length === 0) {
-                    notificationContainer.remove();
-                }
-            }, 300);
-        }, 3000);
-    }
-
     // 成功メッセージの表示
     function showSuccess(message = '設定を保存しました') {
         showNotification(message, 'success');

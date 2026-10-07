@@ -35,7 +35,7 @@ const PerformanceUtils = {
   }
 };
 
-// Notifications
+// Notifications（全ページ共通。admin.js・settings.js・upload.js からもこれを使う）
 function showNotification(message, type = 'info') {
   let notificationContainer = document.getElementById('notification-container');
   if (!notificationContainer) {
@@ -71,6 +71,14 @@ function showNotification(message, type = 'info') {
       if (notificationContainer.children.length === 0) notificationContainer.remove();
     }, 300);
   }, 3000);
+}
+
+// ファイルサイズを読みやすい形式にする（例: 1536 → "1.5 KB"）
+function formatFileSize(bytes) {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  bytes = Math.max(Number(bytes) || 0, 0);
+  const pow = Math.min(Math.floor((bytes ? Math.log(bytes) : 0) / Math.log(1024)), units.length - 1);
+  return Math.round(bytes / Math.pow(1024, pow) * 100) / 100 + ' ' + units[pow];
 }
 
 // Clipboard helpers
@@ -251,6 +259,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Expose for other scripts
 window.PerformanceUtils = PerformanceUtils;
 window.showNotification = showNotification;
+window.formatFileSize = formatFileSize;
 window.copyToClipboard = copyToClipboard;
 window.fallbackCopyToClipboard = fallbackCopyToClipboard;
 window.showManualCopyNotification = showManualCopyNotification;

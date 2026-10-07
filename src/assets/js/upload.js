@@ -272,14 +272,6 @@
       if (videoPreview) videoPreview.classList.remove('hidden');
     }
 
-    function formatFileSize(bytes) {
-      if (bytes === 0) return '0 B';
-      var k = 1024;
-      var sizes = ['B', 'KB', 'MB', 'GB'];
-      var i = Math.floor(Math.log(bytes) / Math.log(k));
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-
     function startUpload(file) {
       if (maxUploadBytes > 0 && file.size > maxUploadBytes) {
         showErrorMessage('ファイルサイズが上限を超えています（最大 ' + formatFileSize(maxUploadBytes) + '）');
