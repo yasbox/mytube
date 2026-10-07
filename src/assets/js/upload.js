@@ -325,17 +325,25 @@
       resumable.on('fileSuccess', function(file, response){
         try {
           var result = JSON.parse(response);
-          if (result.success) {
+          // 動画の登録まで完了した応答（video_id あり）のときだけ成功とする
+          if (result.success && result.video_id) {
             showSuccessMessage(result.video_id);
           } else {
-            showErrorMessage('アップロードに失敗しました');
+            showErrorMessage(result.message && !result.success ? result.message : '動画の登録を確認できませんでした。管理パネルで確認してください');
           }
         } catch(e) {
           showErrorMessage('アップロードに失敗しました');
         }
       });
-      resumable.on('fileError', function(){ showErrorMessage('アップロードに失敗しました'); });
-      resumable.on('error', function(){ showErrorMessage('アップロードに失敗しました'); });
+      // fileError のときも Resumable.js が error を発火するため、通知はこちらで1回だけ出す
+      resumable.on('error', function(message){
+        var text = 'アップロードに失敗しました';
+        try {
+          var result = JSON.parse(message);
+          if (result && result.message) text = 'アップロードに失敗しました: ' + result.message;
+        } catch(e) { /* JSON 以外の応答は既定の文言 */ }
+        showErrorMessage(text);
+      });
 
       resumable.addFile(file);
 

@@ -18,8 +18,8 @@
     RewriteRule ^temp_uploads/ - [F,L]
     # 動画・サムネイルは閲覧権限を確認してから、期限付きの専用 URL へリダイレクトする（media.php）
     RewriteRule ^(videos|thumbnails)/([^/]+)$ media.php?kind=$1&name=$2 [B,QSA,L]
-    # 専用 URL（media/<期間>/<トークン>/<ファイル名>）の形式以外は拒否（一覧表示等を防ぐ）
-    RewriteRule ^media/(?![0-9]+/[0-9a-f]{32}/[A-Za-z0-9][A-Za-z0-9._-]*\.(mp4|webm|ogg|avi|mov|mkv|flv|jpg)$) - [F,L]
+    # 専用 URL（media/<期間>/<トークン>/<ファイル名>）の形式以外は拒否（一覧表示等を防ぐ）。拡張子は大文字も可（.MOV 等）
+    RewriteRule ^media/(?![0-9]+/[0-9a-f]{32}/[A-Za-z0-9][A-Za-z0-9._-]*\.(?i:mp4|webm|ogg|avi|mov|mkv|flv|jpg)$) - [F,L]
 </IfModule>
 
 # セキュリティヘッダー
