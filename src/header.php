@@ -60,14 +60,14 @@ $hideHamburger = $menuItems === 0;
 
 <!-- ヘッダー -->
 <header class="glass-effect-header sticky top-0 z-50">
-  <div class="max-w-none mx-auto px-0 md:px-4 py-0 md:py-2">
+  <div class="max-w-none mx-auto px-0 md:px-4 py-0">
     <div class="flex items-center justify-between">
       <a href="index.php" class="flex items-center space-x-2 md:space-x-4 lg:space-x-6 hover:opacity-80 transition-opacity duration-300">
-        <div class="flex items-center space-x-2 md:space-x-3 lg:space-x-4">
+        <div class="flex items-center space-x-2 md:space-x-3">
           <?php $brandName = Config::get('app.name', 'MyTube'); ?>
-          <img src="<?= htmlspecialchars($logoPathForTag) ?>?v=<?= $logoVersion ?>" alt="<?= htmlspecialchars($brandName) ?>" class="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 object-contain">
+          <img src="<?= htmlspecialchars($logoPathForTag) ?>?v=<?= $logoVersion ?>" alt="<?= htmlspecialchars($brandName) ?>" class="w-8 h-8 md:w-9 md:h-9 object-contain">
           <!-- サイトタイトル -->
-          <h1 id="site-title" class="mb-0 text-2xl md:text-3xl lg:text-4xl font-bold text-primary"><?= htmlspecialchars($brandName) ?></h1>
+          <h1 id="site-title" class="mb-0 text-xl md:text-2xl font-bold text-primary"><?= htmlspecialchars($brandName) ?></h1>
         </div>
       </a>
 

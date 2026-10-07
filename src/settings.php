@@ -107,7 +107,7 @@ include 'head.php';
                             <label class="font-bold settings-label mt-1 whitespace-nowrap flex-shrink-0">サイトロゴ</label>
                             <div class="flex flex-col space-y-4 w-full">
                                 <div class="flex flex-col md:flex-row md:items-center gap-4">
-                                    <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center flex-shrink-0">
+                                    <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border border-[color:var(--table-border)] bg-gray-50 flex items-center justify-center flex-shrink-0">
                                         <img id="brand-logo-preview" alt="プレビュー" class="w-full h-full object-cover" src="<?= htmlspecialchars($brandLogoPreviewSrc, ENT_QUOTES, 'UTF-8') ?>" />
                                         <span id="brand-logo-preview-placeholder" class="text-xs text-gray-400" style="display:none;">選択した画像のプレビュー</span>
                                     </div>

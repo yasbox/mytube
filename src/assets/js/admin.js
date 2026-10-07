@@ -952,30 +952,30 @@ function createVideoRow(video, videoId) {
                 </div>
                 <div class="flex-1 min-w-0">
                     <div>
-                        <p data-action="play" class="video-title-admin font-medium text-sm md:text-base lg:text-lg mb-1 cursor-pointer hover:text-blue-400 transition-colors duration-200" title="${escapeHtml(title)}">${escapeHtml(truncatedTitle)}</p>
+                        <p data-action="play" class="video-title-admin font-medium text-sm md:text-base mb-1 cursor-pointer hover:text-blue-400 transition-colors duration-200" title="${escapeHtml(title)}">${escapeHtml(truncatedTitle)}</p>
                         <p class="video-comment-admin text-xs md:text-sm" title="${escapeHtml(comment)}">${escapeHtml(truncatedComment || 'コメントなし')}</p>
                     </div>
                 </div>
             </div>
         </td>
-        <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg admin-table-data whitespace-nowrap overflow-hidden text-ellipsis" data-label="再生数">${escapeHtml(video.views.toLocaleString())}</td>
-        <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg admin-table-data whitespace-nowrap overflow-hidden text-ellipsis" data-label="いいね数">${escapeHtml(video.likes.toLocaleString())}</td>
-        <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg admin-table-data whitespace-nowrap overflow-hidden text-ellipsis" data-label="アップロード日">${escapeHtml(video.upload_date)}</td>
-        <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg admin-table-data whitespace-nowrap overflow-hidden text-ellipsis" data-label="ファイルサイズ">${escapeHtml(video.file_size)}</td>
-        <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg admin-table-data whitespace-nowrap overflow-hidden text-ellipsis" data-label="形式">
+        <td class="px-3 py-2 md:py-3 text-sm md:text-base admin-table-data whitespace-nowrap overflow-hidden text-ellipsis" data-label="再生数">${escapeHtml(video.views.toLocaleString())}</td>
+        <td class="px-3 py-2 md:py-3 text-sm md:text-base admin-table-data whitespace-nowrap overflow-hidden text-ellipsis" data-label="いいね数">${escapeHtml(video.likes.toLocaleString())}</td>
+        <td class="px-3 py-2 md:py-3 text-sm md:text-base admin-table-data whitespace-nowrap overflow-hidden text-ellipsis" data-label="アップロード日">${escapeHtml(video.upload_date)}</td>
+        <td class="px-3 py-2 md:py-3 text-sm md:text-base admin-table-data whitespace-nowrap overflow-hidden text-ellipsis" data-label="ファイルサイズ">${escapeHtml(video.file_size)}</td>
+        <td class="px-3 py-2 md:py-3 text-sm md:text-base admin-table-data whitespace-nowrap overflow-hidden text-ellipsis" data-label="形式">
             ${escapeHtml(fileExtension.toUpperCase())}
         </td>
-        <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg whitespace-nowrap overflow-hidden text-ellipsis" data-label="変換">
+        <td class="px-3 py-2 md:py-3 text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis" data-label="変換">
             <button type="button" data-action="convert" id="conversion-btn-${videoId}" class="px-3 py-1 admin-convert-btn text-xs rounded transition-colors duration-200" title="${isMp4 ? 'MP4を再エンコード' : 'MP4に変換'}">
                 ${isMp4 ? '再エンコード' : '変換'}
             </button>
         </td>
-        <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg whitespace-nowrap overflow-hidden text-ellipsis" data-label="公開">
+        <td class="px-3 py-2 md:py-3 text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis" data-label="公開">
             <button type="button" data-action="visibility" class="px-3 py-1 ${video.is_public !== false ? 'admin-public-btn' : 'admin-private-btn'} text-xs rounded transition-colors duration-200" title="${video.is_public !== false ? '非公開にする' : '公開する'}">
                 ${video.is_public !== false ? '公開' : '非公開'}
             </button>
         </td>
-        <td class="px-4 md:px-4 py-2 md:py-3 text-sm md:text-base lg:text-lg whitespace-nowrap overflow-hidden text-ellipsis" data-label="削除">
+        <td class="px-3 py-2 md:py-3 text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis" data-label="削除">
             <button type="button" data-action="delete" class="action-button-mobile p-1 md:p-2 admin-delete-btn rounded-lg transition-all duration-200" title="削除">
                 <svg class="w-4 h-4 md:w-6 md:h-6 lg:w-7 lg:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>

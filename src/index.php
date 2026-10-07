@@ -305,7 +305,7 @@ $pageCss = 'index';
                   <?php endif ?>
                 </div>
                 <?php if ($currentComment): ?>
-                  <div class="border-t pt-4"><div class="text-base leading-relaxed video-meta-info whitespace-pre-wrap break-words"><?= htmlspecialchars(trim($currentComment)) ?></div></div>
+                  <div class="border-t border-[color:var(--table-border)] pt-4"><div class="text-base leading-relaxed video-meta-info whitespace-pre-wrap break-words"><?= htmlspecialchars(trim($currentComment)) ?></div></div>
                 <?php endif ?>
               </div>
             </div>
@@ -403,7 +403,7 @@ $pageCss = 'index';
   <!-- 動画一覧セクション（ページ下部） -->
   <?php if ($isSharedAccess): ?>
     <!-- 共有リンクアクセス時は非表示（未認証ユーザーのみ） -->
-    <div class="w-full mx-auto p-2 md:p-4 lg:p-6 xl:p-8 px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-20 3xl:px-24 <?= $currentVideo ? 'mt-8 lg:mt-12' : 'mt-4 lg:mt-8' ?>">
+    <div class="w-full mx-auto p-2 md:p-4 lg:p-6 xl:p-8 px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-20 3xl:px-24 <?= $currentVideo ? 'mt-8 lg:mt-12' : 'mt-2 lg:mt-0' ?>">
       <div class="video-info-container rounded-xl md:rounded-2xl lg:rounded-3xl p-8 md:p-12 lg:p-16 max-w-2xl mx-auto text-center">
         <div class="w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 lg:mb-8" style="background-color: var(--blue-100);">
                       <svg class="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--blue-600);">
@@ -416,7 +416,7 @@ $pageCss = 'index';
       </div>
     </div>
   <?php elseif (!empty($videos)): ?>
-  <div class="w-full mx-auto p-2 md:p-4 lg:p-6 xl:p-8 px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-20 3xl:px-24 <?= $currentVideo ? 'mt-8 lg:mt-12' : 'mt-4 lg:mt-8' ?>">
+  <div class="w-full mx-auto p-2 md:p-4 lg:p-6 xl:p-8 px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-20 3xl:px-24 <?= $currentVideo ? 'mt-8 lg:mt-12' : 'mt-2 lg:mt-0' ?>">
     <div class="mb-6 lg:mb-8 w-full">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between">
         <div class="flex items-center mb-4 md:mb-0">
