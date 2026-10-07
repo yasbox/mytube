@@ -60,41 +60,41 @@ if (isUserAuthenticated()) {
 // ログイン処理
 $errorMessage = '';
 $loginResult = null;
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // CSRF検証
-        if (function_exists('verifyCSRFToken')) {
-            $token = $_POST['csrf_token'] ?? '';
-            if (!verifyCSRFToken($token)) {
-                $errorMessage = '不正なリクエストです（CSRF）';
-            }
-        }
-    $password = $_POST['password'] ?? '';
-    $rememberMe = true; // 常にリメンバーミー機能を有効にする
-
-    // セッションの内容はログに出さない（CSRF トークンや共有リンクのパスワードが含まれるため）
-    $loginResult = login($password, $rememberMe);
-
-    if ($loginResult && $loginResult['success']) {
-        // ログイン成功
-        // 保存されたリダイレクト先がある場合はそこに移動、なければトップページに移動
-        $redirectUrl = $_SESSION['redirect_after_login'] ?? 'index.php';
-
-        // リダイレクト先が安全かチェック
-        if (isset($_SESSION['redirect_after_login']) && !isSafeRedirectUrl($redirectUrl)) {
-            $redirectUrl = 'index.php';
-        }
-
-        unset($_SESSION['redirect_after_login']); // セッションから削除
-
-        // 出力バッファをクリアしてリダイレクト
-        if (ob_get_level()) {
-            ob_end_clean();
-        }
-        
-        // 直接、保存先（安全確認済）へリダイレクト
-        header('Location: ' . $redirectUrl);
-        exit;
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // CSRF検証に失敗したらパスワードを照合しない
+    // （他サイトから閲覧者を勝手にログインさせる攻撃を防ぐ。ページを長く開いたままで
+    //   セッションが切れた場合もここに来るため、再ログインを促す文言にする）
+    $token = $_POST['csrf_token'] ?? '';
+    if (!is_string($token) || !verifyCSRFToken($token)) {
+        $errorMessage = 'ページの有効期限が切れました。もう一度ログインしてください';
     } else {
+        $password = $_POST['password'] ?? '';
+        $rememberMe = true; // 常にリメンバーミー機能を有効にする
+
+        // セッションの内容はログに出さない（CSRF トークンや共有リンクのパスワードが含まれるため）
+        $loginResult = login($password, $rememberMe);
+
+        if ($loginResult && $loginResult['success']) {
+            // ログイン成功
+            // 保存されたリダイレクト先がある場合はそこに移動、なければトップページに移動
+            $redirectUrl = $_SESSION['redirect_after_login'] ?? 'index.php';
+
+            // リダイレクト先が安全かチェック
+            if (isset($_SESSION['redirect_after_login']) && !isSafeRedirectUrl($redirectUrl)) {
+                $redirectUrl = 'index.php';
+            }
+
+            unset($_SESSION['redirect_after_login']); // セッションから削除
+
+            // 出力バッファをクリアしてリダイレクト
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+
+            // 直接、保存先（安全確認済）へリダイレクト
+            header('Location: ' . $redirectUrl);
+            exit;
+        }
         $errorMessage = 'パスワードが正しくありません';
     }
 }
