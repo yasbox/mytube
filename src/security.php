@@ -5,16 +5,6 @@
 
 // 互換レイヤーは不要化。BootstrapでConfigを初期化済み。
 
-// パスワードハッシュ化関数（将来的な拡張用）
-function hashPassword($password) {
-    return password_hash($password, PASSWORD_DEFAULT);
-}
-
-// パスワード検証関数（将来的な拡張用）
-function verifyPassword($password, $hash) {
-    return password_verify($password, $hash);
-}
-
 // この関数は functions.php で定義済み
 
 // リメンバーミー機能のチェック
@@ -198,40 +188,6 @@ function generateCSRFToken() {
 // CSRFトークン検証
 function verifyCSRFToken($token) {
     return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
-}
-
-// 入力値のサニタイズ
-function sanitizeInput($input) {
-    if (is_array($input)) {
-        return array_map('sanitizeInput', $input);
-    }
-    return htmlspecialchars(trim($input), ENT_QUOTES, 'UTF-8');
-}
-
-// ファイルアップロードのセキュリティチェック
-function validateUploadedFile($file) {
-    $errors = [];
-    
-    // ファイルサイズチェックは削除（チャンクアップロードにより不要）
-    
-    // MIMEタイプチェック
-    $finfo = finfo_open(FILEINFO_MIME_TYPE);
-    $mimeType = finfo_file($finfo, $file['tmp_name']);
-    finfo_close($finfo);
-    
-    $allowedFormats = Config::get('features.upload.allowed_formats', ['mp4','webm','ogg','avi','mov','mkv','flv']);
-    $allowedTypes = array_map(fn($f) => Config::get("video.mime_types.$f", "video/$f"), $allowedFormats);
-    if (!in_array($mimeType, $allowedTypes)) {
-        $errors[] = '許可されていないファイル形式です';
-    }
-    
-    // ファイル名のセキュリティチェック
-    $filename = $file['name'];
-    if (preg_match('/[<>:"\/\\|?*]/', $filename)) {
-        $errors[] = 'ファイル名に使用できない文字が含まれています';
-    }
-    
-    return $errors;
 }
 
 // ログイン試行回数の制限

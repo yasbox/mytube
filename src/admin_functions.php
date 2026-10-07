@@ -374,12 +374,6 @@ function requireAdminAuthentication() {
     }
 }
 
-// ログインページかどうかをチェックする関数
-function isLoginPage() {
-    $currentPage = basename($_SERVER['PHP_SELF']);
-    return $currentPage === 'login.php';
-} 
-
 // 動画変換開始関数
 function startVideoConversion($videoFile) {
     $videos = Functions::getVideoFiles();

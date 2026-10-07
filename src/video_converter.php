@@ -363,29 +363,4 @@ function generateVideoMetadata($videoPath, $basename) {
     }
 }
 
-/**
- * 変換完了時の処理を行う関数
- * 
- * @param string $outputPath 変換後の動画ファイルパス
- * @param string $basename ファイルのベース名
- * @return bool 処理成功かどうか
- */
-function handleConversionComplete($outputPath, $basename) {
-    
-    
-    // メタデータを生成
-    $metadata = generateVideoMetadata($outputPath, $basename);
-    
-    if ($metadata) {
-        // サムネイル生成（既存の機能があれば）
-        // generateThumbnail($outputPath, $basename);
-        
-        
-        return true;
-    } else {
-        
-        return false;
-    }
-}
-
  
