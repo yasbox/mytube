@@ -1032,8 +1032,8 @@ video {
   max-width: 64rem;
 }
 
-.max-w-\[1920px\] {
-  max-width: 1920px;
+.max-w-\[2560px\] {
+  max-width: 2560px;
 }
 
 .max-w-\[calc\(100vw-2rem\)\] {
@@ -3147,6 +3147,10 @@ video {
     width: 25%;
   }
 
+  .\33xl\:grid-cols-6 {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
   .\33xl\:px-24 {
     padding-left: 6rem;
     padding-right: 6rem;
@@ -3158,8 +3162,18 @@ video {
     width: 20%;
   }
 
+  .\34xl\:grid-cols-8 {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+
   .\34xl\:px-32 {
     padding-left: 8rem;
     padding-right: 8rem;
+  }
+}
+
+@media (min-width: 3200px) {
+  .\35xl\:grid-cols-10 {
+    grid-template-columns: repeat(10, minmax(0, 1fr));
   }
 }

@@ -208,7 +208,7 @@ $pageCss = 'index';
       $ext = strtolower(pathinfo($currentVideo, PATHINFO_EXTENSION));
       $mimeType = $videoMimeTypes[$ext] ?? 'video/mp4';
     ?>
-    <div class="flex flex-col lg:flex-row w-full max-w-[1920px] mx-auto px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-20 3xl:px-24 gap-4 overflow-visible mt-2 md:mt-2">
+    <div class="flex flex-col lg:flex-row w-full max-w-[2560px] mx-auto px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-20 3xl:px-24 gap-4 overflow-visible mt-2 md:mt-2">
       <!-- メインエリア（動画プレイヤーと動画情報） -->
       <div class="flex-1 min-w-0 flex flex-col max-w-full overflow-hidden">
         <div class="animate-fade-in w-full pt-2 md:pt-4 lg:pt-6">
@@ -387,7 +387,7 @@ $pageCss = 'index';
     </div>
   <?php else: ?>
     <?php if (empty($videos)): ?>
-      <div class="max-w-[1920px] mx-auto p-2 md:p-4 lg:p-6 xl:p-8 px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-20 3xl:px-24">
+      <div class="mx-auto p-2 md:p-4 lg:p-6 xl:p-8 px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-20 3xl:px-24">
         <div class="text-center py-8 md:py-16 lg:py-24 animate-fade-in max-w-4xl mx-auto">
           <div class="video-info-container rounded-xl md:rounded-2xl lg:rounded-3xl p-8 md:p-12 lg:p-16 max-w-2xl mx-auto">
             <div class="w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 empty-video-icon-bg rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 lg:mb-8">
@@ -403,7 +403,7 @@ $pageCss = 'index';
   <!-- 動画一覧セクション（ページ下部） -->
   <?php if ($isSharedAccess): ?>
     <!-- 共有リンクアクセス時は非表示（未認証ユーザーのみ） -->
-    <div class="w-full max-w-[1920px] mx-auto p-2 md:p-4 lg:p-6 xl:p-8 px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-20 3xl:px-24 <?= $currentVideo ? 'mt-8 lg:mt-12' : 'mt-4 lg:mt-8' ?>">
+    <div class="w-full mx-auto p-2 md:p-4 lg:p-6 xl:p-8 px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-20 3xl:px-24 <?= $currentVideo ? 'mt-8 lg:mt-12' : 'mt-4 lg:mt-8' ?>">
       <div class="video-info-container rounded-xl md:rounded-2xl lg:rounded-3xl p-8 md:p-12 lg:p-16 max-w-2xl mx-auto text-center">
         <div class="w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 lg:mb-8" style="background-color: var(--blue-100);">
                       <svg class="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--blue-600);">
@@ -416,7 +416,7 @@ $pageCss = 'index';
       </div>
     </div>
   <?php elseif (!empty($videos)): ?>
-  <div class="w-full max-w-[1920px] mx-auto p-2 md:p-4 lg:p-6 xl:p-8 px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-20 3xl:px-24 <?= $currentVideo ? 'mt-8 lg:mt-12' : 'mt-4 lg:mt-8' ?>">
+  <div class="w-full mx-auto p-2 md:p-4 lg:p-6 xl:p-8 px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-20 3xl:px-24 <?= $currentVideo ? 'mt-8 lg:mt-12' : 'mt-4 lg:mt-8' ?>">
     <div class="mb-6 lg:mb-8 w-full">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between">
         <div class="flex items-center mb-4 md:mb-0">
@@ -461,7 +461,7 @@ $pageCss = 'index';
         </div>
       </div>
     </div>
-    <div id="video-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-6 video-list-container scroll-optimized"></div>
+    <div id="video-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-8 5xl:grid-cols-10 gap-4 md:gap-6 video-list-container scroll-optimized"></div>
     <div id="video-list-loading" class="text-center py-4 lg:py-8 video-meta-info text-sm lg:text-base">読み込み中...</div>
   </div>
   <?php endif ?>

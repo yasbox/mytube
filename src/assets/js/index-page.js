@@ -433,6 +433,7 @@ function loadVideosInternal(savedScrollTop = null, callback = null) {
       }
       if (loadingElement) { if (allLoaded) loadingElement.textContent = 'すべて表示しました'; else loadingElement.style.display = ''; }
       loading = false; scrollCheckInProgress = false;
+      if (!allLoaded) requestAnimationFrame(fillScreenIfNeeded);
     })
     .catch(() => {
       loading = false; scrollCheckInProgress = false;
@@ -453,6 +454,13 @@ function checkScrollPosition() {
   if (scrollDirection === 'down' && (scrollTop + windowHeight) >= (documentHeight - 500)) {
     loadVideos();
   }
+}
+
+// 一覧が画面の高さに足りずスクロールできないときは、続きを読み込む
+// （続きはスクロールで読み込むため、大きなモニターで列が多いと最初の分しか表示されなくなる）
+function fillScreenIfNeeded() {
+  if (loading || allLoaded || scrollCheckInProgress) return;
+  if (document.documentElement.scrollHeight - window.innerHeight < 500) loadVideos();
 }
 
 const debouncedScrollCheck = PerformanceUtils.debounce(checkScrollPosition, 100);
@@ -514,6 +522,7 @@ window.incrementViewCount = incrementViewCount;
 window.changeSort = changeSort;
 
 window.addEventListener('scroll', debouncedScrollCheck, { passive: true });
+window.addEventListener('resize', PerformanceUtils.debounce(fillScreenIfNeeded, 200), { passive: true });
 document.addEventListener('visibilitychange', function() {
   if (document.visibilityState === 'visible') initLikeButtonState();
 });
