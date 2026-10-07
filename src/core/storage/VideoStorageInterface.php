@@ -44,9 +44,4 @@ interface VideoStorageInterface
      * 統計情報を取得
      */
     public function getStats(): array;
-    
-    /**
-     * 動画をソートして取得
-     */
-    public function getSortedVideos(string $sort = 'new'): array;
 }

@@ -149,25 +149,19 @@ class Functions
     public static function getSortedVideos(string $sort = 'new'): array
     {
         self::initStorage();
-        $files = self::$storage->getSortedVideos($sort);
         $videos = [];
 
         $videosPath = Config::get('storage.path', 'videos/');
         $thumbnailsPath = Config::get('storage.thumbnails_path', 'thumbnails/');
 
-        foreach ($files as $file) {
-            // 既に整形済みの要素が来た場合はそのまま取り込む
-            if (is_array($file)) {
-                $videos[] = $file;
-                continue;
-            }
-
-            if (!is_string($file)) {
-                continue;
-            }
-
+        foreach (self::$storage->getVideoList() as $file) {
             $basename = pathinfo($file, PATHINFO_FILENAME);
             $metadata = self::$storage->getVideoMetadata($basename);
+
+            // 非公開の動画は出さない（is_public が未設定なら公開）
+            if (($metadata['is_public'] ?? true) === false) {
+                continue;
+            }
 
             $videoFilePath = $videosPath . $file;
             $thumbnailFilePath = $thumbnailsPath . $basename . '.jpg';
@@ -196,6 +190,36 @@ class Functions
             ];
         }
 
+        return self::sortVideos($videos, $sort);
+    }
+
+    /**
+     * 動画の一覧を並べ替える（トップページの一覧と管理画面で同じ順番にするため、並べ替えはここだけで行う）
+     * 各要素の views・likes・upload_date（'Y-m-d H:i:s'）を使う
+     * - new: 投稿日の新しい順
+     * - popular: 「再生数 + いいね数×2」の大きい順
+     * - views / likes: 再生数 / いいね数の多い順
+     * 同じ値の動画どうしは投稿日の新しい順
+     */
+    public static function sortVideos(array $videos, string $sort = 'new'): array
+    {
+        $score = function (array $video) use ($sort): int {
+            $views = (int)($video['views'] ?? 0);
+            $likes = (int)($video['likes'] ?? 0);
+            switch ($sort) {
+                case 'popular':
+                    return $views + $likes * 2;
+                case 'views':
+                    return $views;
+                case 'likes':
+                    return $likes;
+                default:
+                    return 0;
+            }
+        };
+        usort($videos, function ($a, $b) use ($score) {
+            return [$score($b), (string)($b['upload_date'] ?? '')] <=> [$score($a), (string)($a['upload_date'] ?? '')];
+        });
         return $videos;
     }
     
@@ -359,7 +383,7 @@ class Functions
                 'comment' => $metadata['comment'] ?? '',
                 'views' => $metadata['views'] ?? 0,
                 'likes' => $metadata['likes'] ?? 0,
-                'upload_date' => $metadata['upload_date'] ? date('Y-m-d H:i:s', strtotime($metadata['upload_date'])) : date('Y-m-d H:i:s', filemtime($videoPath)),
+                'upload_date' => !empty($metadata['upload_date']) ? date('Y-m-d H:i:s', strtotime($metadata['upload_date'])) : date('Y-m-d H:i:s', filemtime($videoPath)),
                 'file_size' => file_exists($videoPath) ? self::formatFileSize(filesize($videoPath)) : '0 B',
                 'file_size_bytes' => file_exists($videoPath) ? filesize($videoPath) : 0,
                 'has_thumbnail' => file_exists($thumbnailPath),
@@ -369,12 +393,7 @@ class Functions
             ];
         }
         
-        // アップロード日時順でソート（新しい順）
-        usort($result, function($a, $b) {
-            return strtotime($b['upload_date']) - strtotime($a['upload_date']);
-        });
-        
-        return $result;
+        return self::sortVideos($result, 'new');
     }
     
     /**
@@ -382,56 +401,9 @@ class Functions
      */
     public static function getAdminVideoListSorted(string $sort = 'new'): array
     {
-        $videos = self::getAdminVideoList();
-        
-        // ソート条件に応じてソート
-        if ($sort === 'popular') {
-            // 人気順（再生数といいね数を組み合わせた評価値）
-            usort($videos, function($a, $b) {
-                // より直感的な人気度計算
-                // 1. 基本スコア（再生数 + いいね数）
-                $aBaseScore = $a['views'] + $a['likes'];
-                $bBaseScore = $b['views'] + $b['likes'];
-                
-                // 2. いいね率ボーナス（再生数が1以上の場合）
-                $aLikeRateBonus = 0;
-                $bLikeRateBonus = 0;
-                
-                if ($a['views'] > 0) {
-                    $aLikeRate = ($a['likes'] / $a['views']) * 100;
-                    $aLikeRateBonus = $aLikeRate * 0.1; // いいね率の10%をボーナス
-                }
-                if ($b['views'] > 0) {
-                    $bLikeRate = ($b['likes'] / $b['views']) * 100;
-                    $bLikeRateBonus = $bLikeRate * 0.1; // いいね率の10%をボーナス
-                }
-                
-                // 3. 総合スコア
-                $aTotalScore = $aBaseScore + $aLikeRateBonus;
-                $bTotalScore = $bBaseScore + $bLikeRateBonus;
-                
-                return $bTotalScore - $aTotalScore;
-            });
-        } elseif ($sort === 'views') {
-            // 再生数順
-            usort($videos, function($a, $b) {
-                return $b['views'] - $a['views'];
-            });
-        } elseif ($sort === 'likes') {
-            // いいね数順
-            usort($videos, function($a, $b) {
-                return $b['likes'] - $a['likes'];
-            });
-        } else {
-            // 新しい順（デフォルト）
-            usort($videos, function($a, $b) {
-                return strtotime($b['upload_date']) - strtotime($a['upload_date']);
-            });
-        }
-        
-        return $videos;
+        return self::sortVideos(self::getAdminVideoList(), $sort);
     }
-    
+
     /**
      * ページネーション機能付き管理用動画一覧を取得
      */
