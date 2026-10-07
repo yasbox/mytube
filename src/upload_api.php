@@ -435,7 +435,7 @@ function tryFinalizeUpload(string $tempDir, int $totalChunks, int $totalSize, st
         // 結果を先に記録してから一時ファイルを消す（消した直後の確認リクエストにも結果を返せるように）
         @file_put_contents("temp_uploads/{$identifier}.result.json", json_encode($response), LOCK_EX);
         cleanupTempFiles($tempDir);
-        cleanupOldFinalizeFiles();
+        cleanupStaleUploadFiles();
         return $response;
     } finally {
         if ($lock) {
@@ -446,12 +446,20 @@ function tryFinalizeUpload(string $tempDir, int $totalChunks, int $totalSize, st
 }
 
 /**
- * 古い排他用・結果用ファイル（1時間以上前）を削除する
+ * 不要になったアップロード用の一時ファイルを削除する（アップロード完了時に実行）
+ * - 排他用・結果用ファイル: 1時間以上前のもの
+ * - 中断・失敗したアップロードのチャンク: 最後の更新から7日以上たったもの
+ *   （それまでは同じファイルを選び直せば続きから登録できる）
  */
-function cleanupOldFinalizeFiles() {
+function cleanupStaleUploadFiles() {
     foreach (array_merge(glob('temp_uploads/*.lock') ?: [], glob('temp_uploads/*.result.json') ?: []) as $file) {
         if (is_file($file) && filemtime($file) < time() - 3600) {
             @unlink($file);
+        }
+    }
+    foreach (glob('temp_uploads/*', GLOB_ONLYDIR) ?: [] as $dir) {
+        if (isValidResumableIdentifier(basename($dir)) && filemtime($dir) < time() - 7 * 86400) {
+            cleanupTempFiles($dir);
         }
     }
 }
