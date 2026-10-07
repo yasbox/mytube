@@ -121,7 +121,11 @@ $isAdminPage = false;
     <div class="text-center py-8 md:py-16 lg:py-24 animate-fade-in max-w-4xl mx-auto">
       <div class="rounded-xl md:rounded-2xl lg:rounded-3xl p-8 md:p-12 lg:p-16 max-w-md mx-auto">
         <!-- ロゴ -->
-        <img src="images/logo.png?v=<?= $logoVersion ?>" alt="<?= htmlspecialchars(Config::get('app.name', 'MyTube')) ?>" class="mx-auto mb-6 md:mb-8 lg:mb-10 w-14 h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 object-contain">
+        <?php
+          // サイトロゴ（設定画面で登録した場合はそのロゴ）。最大 80px 表示のため、高解像度端末向けに 512px の画像を使う
+          $loginLogoRel = is_file(__DIR__ . '/data/branding/logo-square.png') ? 'data/branding/logo-square.png' : 'images/logo.png';
+        ?>
+        <img src="<?= htmlspecialchars($loginLogoRel) ?>?v=<?= (int)@filemtime(__DIR__ . '/' . $loginLogoRel) ?>" alt="<?= htmlspecialchars(Config::get('app.name', 'MyTube')) ?>" class="mx-auto mb-6 md:mb-8 lg:mb-10 w-14 h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 object-contain">
         
         <h1 class="font-bold mb-4 md:mb-6 lg:mb-8" style="color: var(--text-primary);"><?= htmlspecialchars(Config::get('app.name', 'MyTube')) ?></h1>
         
