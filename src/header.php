@@ -46,8 +46,8 @@ $userLogo48Rel = 'data/branding/logo-48.png';
 $logoPathForTag = is_file(__DIR__ . '/' . $userLogo48Rel) ? $userLogo48Rel : 'images/logo.png';
 $logoVersion = getAssetVersion($logoPathForTag);
 
-// 検索（ログイン画面では出さない）
-$showSearch = !$isLoginPage;
+// 検索（ログイン画面と、共有リンクで開いた画面では出さない。共有リンクの人は検索するとログイン画面に飛ばされるため）
+$showSearch = !$isLoginPage && empty($isSharedAccess);
 $searchQuery = isset($_GET['q']) && is_string($_GET['q']) ? $_GET['q'] : '';
 
 // メニューの項目
