@@ -300,7 +300,8 @@ $pageCss = 'home';
           ?>
           <a href="?v=<?= urlencode($video) ?>" class="related-item" data-video="<?= htmlspecialchars($video) ?>">
             <div class="related-item__thumb thumb">
-              <img src="<?= htmlspecialchars($thumbUrl) ?>" alt="" loading="lazy">
+              <img class="thumb-bg" src="<?= htmlspecialchars($thumbUrl) ?>" alt="" loading="lazy">
+              <img class="thumb-img" src="<?= htmlspecialchars($thumbUrl) ?>" alt="" loading="lazy">
               <?php if (!empty($videoDuration)): ?>
               <span class="duration-badge"><?= formatDuration($videoDuration) ?></span>
               <?php endif ?>

@@ -67,7 +67,8 @@ function createVideoRow(video, videoId) {
     row.innerHTML = `
         <div class="vrow__video">
             <div class="vrow__thumb" data-action="play" title="動画ページで再生">
-                <img src="${escapeHtml(thumbSrc)}" alt="" loading="lazy">
+                <img class="thumb-bg" src="${escapeHtml(thumbSrc)}" alt="" loading="lazy">
+                <img class="thumb-img" src="${escapeHtml(thumbSrc)}" alt="" loading="lazy">
                 ${duration ? `<span class="duration-badge">${escapeHtml(duration)}</span>` : ''}
             </div>
             <div class="vrow__text">
@@ -246,7 +247,7 @@ function showConversionModal(videoFile, videoTitle) {
     document.getElementById('conversion-filename').textContent = videoFile;
     document.getElementById('conversion-format').textContent = videoFile.split('.').pop().toUpperCase();
     const row = findVideoRow(videoFile);
-    document.getElementById('conversion-thumbnail').src = row?.querySelector('.vrow__thumb img')?.src || 'images/default-thumbnail-small.svg';
+    document.getElementById('conversion-thumbnail').src = row?.querySelector('.vrow__thumb .thumb-img')?.src || 'images/default-thumbnail-small.svg';
     document.getElementById('conversion-progress-modal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
     window.conversionStartTime = Date.now();
@@ -345,7 +346,8 @@ function showEditModal(video) {
                     <div class="field">
                         <span class="field__label">サムネイル</span>
                         <div class="edit-thumb" data-action="pick-thumbnail" title="クリックしてサムネイルを差し替え">
-                            <img src="${escapeHtml(thumb)}" alt="">
+                            <img class="thumb-bg" src="${escapeHtml(thumb)}" alt="">
+                            <img class="thumb-img" src="${escapeHtml(thumb)}" alt="">
                             <span class="edit-thumb__label">クリックして変更</span>
                         </div>
                         <input type="file" id="thumbnail-file-${safeVideoId}" accept="image/jpeg,image/png,image/webp" class="hidden">
@@ -433,10 +435,10 @@ async function uploadThumbnail(videoFile, basename) {
             return;
         }
         showNotification('サムネイルを更新しました', 'success');
-        document.querySelector('#edit-modal .edit-thumb img')?.setAttribute('src', data.thumbnail_url);
+        document.querySelectorAll('#edit-modal .edit-thumb img').forEach(img => img.setAttribute('src', data.thumbnail_url));
         const row = document.getElementById(`view-${safeId}`);
         if (row) {
-            row.querySelector('.vrow__thumb img')?.setAttribute('src', data.thumbnail_url);
+            row.querySelectorAll('.vrow__thumb img').forEach(img => img.setAttribute('src', data.thumbnail_url));
             row.setAttribute('data-thumb-url', data.thumbnail_url);
             row.setAttribute('data-has-thumbnail', 'true');
         }

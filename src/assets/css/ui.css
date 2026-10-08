@@ -172,3 +172,22 @@
   font-size: 14px;
 }
 .list-status.hidden { display: none; }
+
+/* サムネイル画像: 縦長・正方形の動画も切らずに全体を見せ、余白は同じ画像をぼかして埋める
+   （枠に position: relative と overflow: hidden を付け、.thumb-bg → .thumb-img の順に置く） */
+.thumb-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(12px) brightness(0.75);
+  transform: scale(1.15);
+}
+.thumb-img {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}

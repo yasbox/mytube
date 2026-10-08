@@ -79,7 +79,8 @@ function renderVideoCard(video) {
   return `
     <div class="video-card">
       <a href="${href}" class="thumb" tabindex="-1" aria-hidden="true">
-        <img src="${escapeHtml(video.thumb)}" alt="" loading="lazy">
+        <img class="thumb-bg" src="${escapeHtml(video.thumb)}" alt="" loading="lazy">
+        <img class="thumb-img" src="${escapeHtml(video.thumb)}" alt="" loading="lazy">
         ${duration}
         ${progressBarHtml(video.video)}
       </a>
