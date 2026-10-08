@@ -8,7 +8,7 @@ class Env
      */
     public static function load(string $path): void
     {
-        error_log("Env::load: attempting to load .env from {$path}");
+        // 読み込めたときは何も記録しない（毎回のアクセスでエラーログに書かれ、本物のエラーが探しにくくなるため）
         if (!is_file($path) || !is_readable($path)) {
             error_log("Env::load: .env not found or not readable: {$path}");
             return;
@@ -20,7 +20,6 @@ class Env
             return;
         }
 
-        $loadedCount = 0;
         foreach ($lines as $line) {
             $trimmed = trim($line);
 
@@ -76,10 +75,7 @@ class Env
             putenv("{$name}={$value}");
             $_ENV[$name] = $value;
             $_SERVER[$name] = $value;
-            $loadedCount++;
         }
-
-        error_log("Env::load: loaded {$loadedCount} variables from .env");
     }
 }
 
