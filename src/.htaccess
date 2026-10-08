@@ -5,6 +5,12 @@
 # Xserver では Require all denied も効かないため、mod_rewrite で拒否する
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    # http で来たら https へ転送する（パスワードやログイン情報が暗号化されずに送られないように）
+    # 手元の開発環境（localhost）と、SSL証明書の更新に使う .well-known は除く
+    RewriteCond %{HTTPS} !on
+    RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:[0-9]+)?$
+    RewriteCond %{REQUEST_URI} !^/\.well-known/
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
     # ドットファイル（.env, .htaccess 等）。SSL証明書の検証用 .well-known は除く
     RewriteRule (^|/)\.(?!well-known/) - [F,L]
     # ログ・設定ファイル
