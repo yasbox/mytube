@@ -5,8 +5,9 @@ if (!ob_get_level()) { ob_start(); }
 
 // 一時的なデバッグログは削除（環境設定のログに委譲）
 
-// セッション開始（すでに開始済みでも安全）
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
+// セッション開始（ページと同じ安全な設定で。Cookie に Secure・HttpOnly を付ける）
+require_once __DIR__ . '/functions.php';
+secureSession();
 // ローカルエラー設定（ログのみ）
 ini_set('display_errors', '0');
 error_reporting(E_ALL);

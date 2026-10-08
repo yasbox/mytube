@@ -99,6 +99,7 @@ function secureSession() {
     ini_set('session.cookie_httponly', 1);
     ini_set('session.use_only_cookies', 1);
     ini_set('session.cookie_secure', isset($_SERVER['HTTPS']));
+    ini_set('session.cookie_samesite', 'Lax'); // 他のサイトからの送信には Cookie を付けない（ブラウザの既定と同じ）
     
     // セッション開始
     if (session_status() === PHP_SESSION_NONE) {
