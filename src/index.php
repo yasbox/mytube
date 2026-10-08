@@ -83,7 +83,10 @@ if ($currentVideo) {
 }
 
 $currentVideoIndex = $currentVideo ? array_search($currentVideo, $videoFiles, true) : false;
-if ($currentVideoIndex === false && $currentVideo) {
+// 非公開の動画は一覧に出ないが、管理者は管理画面の再生ボタンから開いて確かめられるようにする
+$isPrivatePreview = $currentVideoIndex === false && $currentVideo
+    && isUserAuthenticated() && isAdmin() && in_array($currentVideo, getVideoFiles(), true);
+if ($currentVideoIndex === false && $currentVideo && !$isPrivatePreview) {
     error_log("index.php: 動画ファイルがリストに存在しません: {$currentVideo}");
     $currentVideo = null;
     $currentVideoIndex = null;
@@ -110,7 +113,7 @@ if (!$isSharedAccess) {
 }
 
 // 現在の動画が非公開の場合のアクセス制御（保護とは別軸）
-if ($currentVideo && isPasswordProtectionEnabled()) {
+if ($currentVideo && !$isPrivatePreview && isPasswordProtectionEnabled()) {
     $currentBasename = pathinfo($currentVideo, PATHINFO_FILENAME);
     $currentMetadata = getVideoMetadata($currentBasename);
     if (($currentMetadata['is_public'] ?? true) === false) {
@@ -164,7 +167,7 @@ $isAdminPage = isAdmin();
 
 // ページタイトル
 if ($currentVideo && $currentTitle) {
-    $pageTitle = htmlspecialchars($currentTitle) . ' - ' . Config::get('app.name', 'MyTube');
+    $pageTitle = $currentTitle . ' - ' . Config::get('app.name', 'MyTube');
 } else {
     $pageTitle = Config::get('app.name', 'MyTube');
 }
@@ -237,6 +240,9 @@ $pageCss = 'index';
             <div class="flex flex-col md:flex-row md:items-start md:justify-between">
               <div class="flex-1 min-w-0">
                 <div class="mb-4">
+                  <?php if ($isPrivatePreview): ?>
+                  <p class="inline-block mb-2 px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 video-meta-info">非公開（管理者だけが見られます）</p>
+                  <?php endif ?>
                   <h1 class="video-title-current font-bold leading-tight m-0"><?= htmlspecialchars($currentTitle) ?: 'タイトルなし' ?></h1>
                 </div>
                 <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
