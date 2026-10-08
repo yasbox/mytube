@@ -146,9 +146,9 @@ body {
   .home { padding: 0 0 16px; }
   .chips-bar { padding: 8px 12px; margin-bottom: 4px; gap: 8px; }
   .search-summary { margin: 4px 12px 12px; }
-  .video-grid { --cols: 1; gap: 24px; }
+  .video-grid { --cols: 1; gap: 40px; } /* カードどうしは広く、サムネイルとタイトルは近くして、どの動画のタイトルかわかるように */
   .video-card .thumb { border-radius: 0; }
-  .video-card__body { padding: 12px 12px 0; }
+  .video-card__body { padding: 8px 12px 0; }
 }
 
 /* ===== 動画ページ ===== */
