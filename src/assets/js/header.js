@@ -42,8 +42,6 @@ const ThemeManager = {
     // アイコン（月・太陽）は CSS が data-theme で切り替える。メニューの文字だけ更新する
     const text = theme === 'dark' ? 'ライトモード' : 'ダークモード';
     document.querySelectorAll('#theme-toggle-header-mobile .theme-text').forEach(el => { el.textContent = text; });
-    const headerToggle = document.getElementById('theme-toggle-header');
-    if (headerToggle) headerToggle.title = text + 'に切り替え';
   }
 };
 

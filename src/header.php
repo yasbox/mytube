@@ -105,11 +105,6 @@ if ($isLoggedIn && $isAdmin && $currentFile !== 'manual.php') {
       </a>
       <?php endif; ?>
 
-      <button type="button" id="theme-toggle-header" class="icon-btn site-header__theme" onclick="ThemeManager.toggleTheme()" title="テーマ切り替え" aria-label="テーマ切り替え">
-        <svg class="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
-        <svg class="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path stroke-linecap="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-      </button>
-
       <?php if (!$isLoggedIn && !$isLoginPage): ?>
       <a href="login.php" class="pill-btn pill-btn--outline site-header__login">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path stroke-linecap="round" d="M4 21a8 8 0 0116 0"/></svg>
@@ -117,11 +112,10 @@ if ($isLoggedIn && $isAdmin && $currentFile !== 'manual.php') {
       </a>
       <?php endif; ?>
 
-      <?php if ($isLoggedIn || $menuItems): ?>
+      <?php // テーマの切り替えはメニューの中に置く（YouTube と同じ。ログインしていない人もメニューから切り替えられる） ?>
       <button type="button" id="mobile-menu-button" class="icon-btn" onclick="toggleMobileMenu()" aria-label="メニュー" aria-haspopup="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
-      <?php endif; ?>
     </div>
   </div>
 
