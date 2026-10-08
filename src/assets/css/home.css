@@ -106,7 +106,7 @@ body {
   overflow: hidden;
   color: var(--ui-text);
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 22px;
   text-decoration: none;
   word-break: break-word;
@@ -389,7 +389,7 @@ body {
   overflow: hidden;
   margin: 0;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 20px;
   word-break: break-word;
 }

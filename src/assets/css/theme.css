@@ -27,11 +27,12 @@
   --ui-bg: #0f0f0f;
   --ui-surface: rgba(255, 255, 255, 0.1);
   --ui-surface-hover: rgba(255, 255, 255, 0.2);
-  --ui-text: #f1f1f1;
-  --ui-text-2: #aaaaaa;
+  /* 文字は真っ白にしない（白と黒の差が大きすぎると、文字がまぶしく、にじんで見える） */
+  --ui-text: #e3e3e3;
+  --ui-text-2: #a6a6a6;
   --ui-border: rgba(255, 255, 255, 0.2);
   --ui-link: #3ea6ff;
-  --ui-chip-on-bg: #f1f1f1;
+  --ui-chip-on-bg: #e3e3e3;
   --ui-chip-on-text: #0f0f0f;
   --ui-input-bg: #121212;
   --ui-input-border: #303030;

@@ -12,6 +12,9 @@ body {
   margin: 0;
   background: var(--ui-bg);
   color: var(--ui-text);
+  /* 書体: Windows の既定（游ゴシック UI）は線が細く、暗い背景では薄くぼやけて読みにくいため、メイリオを使う。
+     YouTube と同じく、英数字は Roboto / Arial、日本語は Mac・iPhone ではヒラギノ、Windows ではメイリオ、Android では Noto */
+  font-family: Roboto, Arial, "Hiragino Sans", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
