@@ -24,8 +24,38 @@ function getVideoFiles() {
     return Functions::getVideoFiles();
 }
 
-function getSortedVideos($sort = 'new') {
-    return Functions::getSortedVideos($sort);
+function getSortedVideos($sort = 'new', $query = '') {
+    return Functions::getSortedVideos($sort, (string)$query);
+}
+
+/**
+ * 検索語を整える（前後の空白を除き、長すぎるものは切る）。不正な値は空文字
+ */
+function normalizeSearchQuery($query): string {
+    if (!is_string($query)) {
+        return '';
+    }
+    return mb_substr(trim(preg_replace('/\s+/u', ' ', $query) ?? ''), 0, 100);
+}
+
+/**
+ * 「3日前」のような相対的な日時（YouTube と同じ表し方。JS の formatRelativeTime と同じ規則）
+ * @param string|null $dateString 'Y-m-d H:i:s' など
+ */
+function formatRelativeTime($dateString): string {
+    $time = $dateString ? strtotime((string)$dateString) : false;
+    if ($time === false) {
+        return '';
+    }
+    $diff = max(0, time() - $time);
+    if ($diff < 60) return 'たった今';
+    if ($diff < 3600) return floor($diff / 60) . '分前';
+    if ($diff < 86400) return floor($diff / 3600) . '時間前';
+    $days = floor($diff / 86400);
+    if ($days < 7) return $days . '日前';
+    if ($days < 30) return floor($days / 7) . '週間前';
+    if ($days < 365) return floor($days / 30) . 'か月前';
+    return floor($days / 365) . '年前';
 }
 
 function getVideoStats() {

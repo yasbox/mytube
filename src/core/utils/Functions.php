@@ -146,7 +146,7 @@ class Functions
      *   ...
      * ]
      */
-    public static function getSortedVideos(string $sort = 'new'): array
+    public static function getSortedVideos(string $sort = 'new', string $query = ''): array
     {
         self::initStorage();
         $videos = [];
@@ -160,6 +160,11 @@ class Functions
 
             // 非公開の動画は出さない（is_public が未設定なら公開）
             if (($metadata['is_public'] ?? true) === false) {
+                continue;
+            }
+            // 検索: タイトルか説明に含まれるものだけ（大文字・小文字は区別しない）
+            if ($query !== '' && mb_stripos((string)($metadata['title'] ?? ''), $query) === false
+                && mb_stripos((string)($metadata['comment'] ?? ''), $query) === false) {
                 continue;
             }
 

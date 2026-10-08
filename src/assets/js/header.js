@@ -39,32 +39,19 @@ const ThemeManager = {
     if (existingToggle) existingToggle.remove();
   },
   updateThemeToggleButton: function(theme) {
-    const headerToggle = document.getElementById('theme-toggle-header');
-    const mobileToggle = document.getElementById('theme-toggle-header-mobile');
-    const icon = theme === 'dark' ? '☀️' : '🌙';
+    // アイコン（月・太陽）は CSS が data-theme で切り替える。メニューの文字だけ更新する
     const text = theme === 'dark' ? 'ライトモード' : 'ダークモード';
-    if (headerToggle) {
-      const iconElement = headerToggle.querySelector('.theme-icon');
-      const textElement = headerToggle.querySelector('.theme-text');
-      if (iconElement) iconElement.textContent = icon;
-      if (textElement) textElement.textContent = text;
-    }
-    if (mobileToggle) {
-      const iconElement = mobileToggle.querySelector('.theme-icon');
-      const textElement = mobileToggle.querySelector('.theme-text');
-      if (iconElement) iconElement.textContent = icon;
-      if (textElement) textElement.textContent = text;
-    }
+    document.querySelectorAll('#theme-toggle-header-mobile .theme-text').forEach(el => { el.textContent = text; });
+    const headerToggle = document.getElementById('theme-toggle-header');
+    if (headerToggle) headerToggle.title = text + 'に切り替え';
   }
 };
 
 function toggleMobileMenu() {
   const menu = document.getElementById('mobile-menu');
   const button = document.getElementById('mobile-menu-button');
-  const icon = document.getElementById('hamburger-icon');
-  const lines = icon ? icon.querySelectorAll('span') : [];
   const menuContent = document.getElementById('mobile-menu-content');
-  const headerEl = document.querySelector('header.glass-effect-header');
+  const headerEl = document.getElementById('site-header');
   if (!menu || !button || !menuContent) return;
   if (menu.classList.contains('hidden')) {
     menu.classList.remove('hidden');
@@ -72,7 +59,6 @@ function toggleMobileMenu() {
     requestAnimationFrame(() => { menuContent.classList.add('menu-open'); });
     if (headerEl) headerEl.classList.add('menu-open');
     document.body.classList.add('menu-open');
-    document.body.style.overflow = 'hidden';
   } else {
     menuContent.classList.remove('menu-open');
     setTimeout(() => {
@@ -80,36 +66,26 @@ function toggleMobileMenu() {
       button.classList.remove('menu-open');
       if (headerEl) headerEl.classList.remove('menu-open');
       document.body.classList.remove('menu-open');
-      document.body.style.overflow = '';
-    }, 300);
+    }, 150);
   }
 }
 
-document.addEventListener('click', function(event) {
-  const menu = document.getElementById('mobile-menu');
-  const button = document.getElementById('mobile-menu-button');
-  const icon = document.getElementById('hamburger-icon');
-  const lines = icon ? icon.querySelectorAll('span') : [];
-  const menuContent = document.getElementById('mobile-menu-content');
-  const headerEl = document.querySelector('header.glass-effect-header');
-  if (!menu || !button || !menuContent) return;
-  if (!menu.contains(event.target) && !button.contains(event.target)) {
-    menuContent.classList.remove('menu-open');
-    setTimeout(() => {
-      menu.classList.add('hidden');
-      button.classList.remove('menu-open');
-      if (headerEl) headerEl.classList.remove('menu-open');
-      document.body.classList.remove('menu-open');
-      document.body.style.overflow = '';
-    }, 300);
+// スマホ: 虫めがねボタンでヘッダーを検索欄に切り替える
+function toggleHeaderSearch(open) {
+  const headerEl = document.getElementById('site-header');
+  if (!headerEl) return;
+  headerEl.classList.toggle('is-searching', open);
+  if (open) {
+    const input = headerEl.querySelector('.site-search__input');
+    if (input) { input.focus(); input.select(); }
   }
-});
+}
 
 document.addEventListener('keydown', function(event) {
   if (event.key === 'Escape') {
     const menu = document.getElementById('mobile-menu');
-    const headerEl = document.querySelector('header.glass-effect-header');
     if (menu && !menu.classList.contains('hidden')) toggleMobileMenu();
+    toggleHeaderSearch(false);
   }
 });
 
@@ -140,7 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
   ThemeManager.init();
   // ヘッダー高さを計測してCSS変数に反映
   try {
-    const header = document.querySelector('header.glass-effect-header');
+    const header = document.getElementById('site-header');
     if (header) {
       const updateHeaderHeight = () => {
         const h = header.getBoundingClientRect().height;
@@ -166,6 +142,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // expose
 window.ThemeManager = ThemeManager;
 window.toggleMobileMenu = toggleMobileMenu;
+window.toggleHeaderSearch = toggleHeaderSearch;
 window.adminLogout = adminLogout;
 window.logout = logout;
 

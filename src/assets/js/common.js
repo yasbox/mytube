@@ -81,6 +81,21 @@ function formatFileSize(bytes) {
   return Math.round(bytes / Math.pow(1024, pow) * 100) / 100 + ' ' + units[pow];
 }
 
+// 「3日前」のような相対的な日時（YouTube と同じ表し方。PHP の formatRelativeTime と同じ規則）
+function formatRelativeTime(dateString) {
+  const time = new Date(String(dateString || '').replace(' ', 'T')).getTime();
+  if (!isFinite(time)) return '';
+  const diff = Math.max(0, (Date.now() - time) / 1000);
+  if (diff < 60) return 'たった今';
+  if (diff < 3600) return Math.floor(diff / 60) + '分前';
+  if (diff < 86400) return Math.floor(diff / 3600) + '時間前';
+  const days = Math.floor(diff / 86400);
+  if (days < 7) return days + '日前';
+  if (days < 30) return Math.floor(days / 7) + '週間前';
+  if (days < 365) return Math.floor(days / 30) + 'か月前';
+  return Math.floor(days / 365) + '年前';
+}
+
 // Clipboard helpers
 function isIOS() {
   try {
@@ -260,6 +275,7 @@ document.addEventListener('DOMContentLoaded', function() {
 window.PerformanceUtils = PerformanceUtils;
 window.showNotification = showNotification;
 window.formatFileSize = formatFileSize;
+window.formatRelativeTime = formatRelativeTime;
 window.copyToClipboard = copyToClipboard;
 window.fallbackCopyToClipboard = fallbackCopyToClipboard;
 window.showManualCopyNotification = showManualCopyNotification;

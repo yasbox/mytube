@@ -104,6 +104,8 @@ $faviconPngVersion = is_file(__DIR__ . '/' . $userApple) ? filemtime(__DIR__ . '
   <link rel="stylesheet" href="assets/css/style.css?v=<?= $cssVersion ?>">
   <?php if ($pageCss === 'index'): ?>
   <link rel="stylesheet" href="assets/css/index.css?v=<?= $indexCssVersion ?>">
+  <?php elseif ($pageCss === 'home'): ?>
+  <link rel="stylesheet" href="assets/css/home.css?v=<?= getAssetVersion('assets/css/home.css') ?>">
   <?php elseif ($pageCss === 'admin'): ?>
   <link rel="stylesheet" href="assets/css/admin.css?v=<?= $adminCssVersion ?>">
   <?php endif ?>

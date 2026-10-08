@@ -135,7 +135,7 @@
 
 /* ダークモード */
 [data-theme="dark"] {
-  --primary-bg: #121212;
+  --primary-bg: #0f0f0f;
   --secondary-bg: #1e1e1e;
   --accent-bg: #2d2d2d;
   --glass-bg: rgba(0, 0, 0, 0.4);
@@ -250,4 +250,45 @@
   /* 透明度付き色変数 */
   --blue-500-10: rgba(59, 130, 246, 0.1);
   --green-500-10: rgba(16, 185, 129, 0.1);
+}
+
+/* ==== 新しいデザインの基本の色（YouTube を手本に、白黒中心＋赤を少し） ====
+   --ui-bg 背景 / --ui-surface 薄い面（チップ・説明欄など）/ --ui-text 文字 / --ui-text-2 補足の文字
+   --ui-border 線 / --ui-accent アクセントの赤（視聴済みバーなど）/ --ui-chip-on-* 選択中のチップ */
+:root {
+  --ui-bg: #ffffff;
+  --ui-surface: rgba(0, 0, 0, 0.05);
+  --ui-surface-hover: rgba(0, 0, 0, 0.1);
+  --ui-text: #0f0f0f;
+  --ui-text-2: #606060;
+  --ui-border: rgba(0, 0, 0, 0.1);
+  --ui-accent: #ff0033;
+  --ui-chip-on-bg: #0f0f0f;
+  --ui-chip-on-text: #ffffff;
+  --ui-input-bg: #ffffff;
+  --ui-input-border: #cccccc;
+  --ui-search-btn: #f8f8f8;
+  --ui-menu-bg: #ffffff;
+  --ui-shadow: 0 4px 32px rgba(0, 0, 0, 0.1);
+  --ui-header-h: 56px;
+}
+
+[data-theme="dark"] {
+  --ui-bg: #0f0f0f;
+  --ui-surface: rgba(255, 255, 255, 0.1);
+  --ui-surface-hover: rgba(255, 255, 255, 0.2);
+  --ui-text: #f1f1f1;
+  --ui-text-2: #aaaaaa;
+  --ui-border: rgba(255, 255, 255, 0.2);
+  --ui-chip-on-bg: #f1f1f1;
+  --ui-chip-on-text: #0f0f0f;
+  --ui-input-bg: #121212;
+  --ui-input-border: #303030;
+  --ui-search-btn: #222222;
+  --ui-menu-bg: #282828;
+  --ui-shadow: 0 4px 32px rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 767px) {
+  :root { --ui-header-h: 48px; }
 }

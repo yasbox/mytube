@@ -1,33 +1,11 @@
-// Index / watch page logic
+// トップページ・動画ページの動き
+// - 一覧: 並べ替え（チップ）・検索・続きの自動読み込み・途中まで見た動画の赤いバー
+// - 動画ページ: 再生数・いいね・共有・続きから再生・次の動画の自動再生・説明の「もっと見る」
 
-// State
-if (window.CocoState === undefined) {
-  window.CocoState = {
-    imageObserver: null,
-    cardObserver: null,
-    offset: 0,
-    limit: 20,
-    loading: false,
-    allLoaded: false,
-    scrollCheckInProgress: false,
-    lastScrollTop: 0,
-    scrollDirection: 'down',
-    sort: 'new'
-  };
-}
-
+const LIST_LIMIT = 20;
+const listState = { offset: 0, loading: false, allLoaded: false, sort: 'new', query: '' };
 let currentVideo = '';
-let uniqueCountup = false;
 let hasCountedView = false;
-let imageObserver = window.CocoState.imageObserver;
-let cardObserver = window.CocoState.cardObserver;
-let offset = window.CocoState.offset;
-const limit = window.CocoState.limit;
-let loading = window.CocoState.loading;
-let allLoaded = window.CocoState.allLoaded;
-let scrollCheckInProgress = window.CocoState.scrollCheckInProgress;
-let lastScrollTop = window.CocoState.lastScrollTop;
-let scrollDirection = window.CocoState.scrollDirection;
 
 function getCookieValue(name) {
   const value = `; ${document.cookie}`;
@@ -36,122 +14,264 @@ function getCookieValue(name) {
   return null;
 }
 
-(function initSortFromCookie() {
-  const cookieSort = getCookieValue('sort_preference');
-  if (cookieSort && ['new', 'popular', 'views', 'likes'].includes(cookieSort)) {
-    window.CocoState.sort = cookieSort;
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\'': '&#39;', '"': '&quot;' }[ch]));
+}
+
+function formatDurationText(seconds) {
+  const total = Math.max(0, Math.floor(Number(seconds) || 0));
+  const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
+}
+
+// ===== 途中まで見た位置の記録（このブラウザの localStorage にだけ保存） =====
+const WatchProgress = {
+  KEY: 'mytube_progress_v1',
+  MAX_ENTRIES: 300,
+  load() {
+    try { return JSON.parse(localStorage.getItem(this.KEY) || '{}') || {}; } catch (_) { return {}; }
+  },
+  get(video) {
+    const entry = this.load()[video];
+    return Array.isArray(entry) ? { time: entry[0], duration: entry[1] } : null;
+  },
+  // 見た割合（0〜1）。記録がなければ 0
+  ratio(video) {
+    const p = this.get(video);
+    return p && p.duration > 0 ? Math.min(1, p.time / p.duration) : 0;
+  },
+  save(video, time, duration) {
+    if (!video || !(duration > 0)) return;
+    try {
+      const all = this.load();
+      // 最後まで（残り15秒未満・95%以上）見たら「見終わった」として最後まで塗る
+      const finished = duration - time < 15 || time / duration > 0.95;
+      if (time < 5 && !all[video]) return;
+      all[video] = [finished ? duration : Math.floor(time), Math.floor(duration), Date.now()];
+      const keys = Object.keys(all);
+      if (keys.length > this.MAX_ENTRIES) {
+        keys.sort((a, b) => (all[a][2] || 0) - (all[b][2] || 0)).slice(0, keys.length - this.MAX_ENTRIES).forEach(k => delete all[k]);
+      }
+      localStorage.setItem(this.KEY, JSON.stringify(all));
+    } catch (_) { /* 保存できない環境では何もしない */ }
   }
-})();
+};
 
-function initLazyLoading() {
-  if (imageObserver) imageObserver.disconnect();
-  imageObserver = PerformanceUtils.createIntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const img = entry.target;
-        if (img.dataset.src) {
-          img.src = img.dataset.src;
-          img.classList.add('loaded');
-          img.removeAttribute('data-src');
-          imageObserver.unobserve(img);
-        }
-      }
+function progressBarHtml(video) {
+  const ratio = WatchProgress.ratio(video);
+  return ratio > 0 ? `<div class="watch-progress"><span style="width:${(ratio * 100).toFixed(1)}%"></span></div>` : '';
+}
+
+// サーバーが描いた「次の動画」のサムネイルにも赤いバーを付ける
+function decorateRelatedProgress() {
+  document.querySelectorAll('.related-item[data-video]').forEach(item => {
+    const thumb = item.querySelector('.thumb');
+    if (thumb && !thumb.querySelector('.watch-progress')) thumb.insertAdjacentHTML('beforeend', progressBarHtml(item.dataset.video));
+  });
+}
+
+// ===== 一覧 =====
+function renderVideoCard(video) {
+  const title = escapeHtml(video.title || 'タイトルなし');
+  const href = `?v=${encodeURIComponent(video.video)}`;
+  const uploaded = video.upload_date || '';
+  const duration = video.duration && video.duration !== '0:00' ? `<span class="duration-badge">${escapeHtml(video.duration)}</span>` : '';
+  return `
+    <div class="video-card">
+      <a href="${href}" class="thumb" tabindex="-1" aria-hidden="true">
+        <img src="${escapeHtml(video.thumb)}" alt="" loading="lazy">
+        ${duration}
+        ${progressBarHtml(video.video)}
+      </a>
+      <div class="video-card__body">
+        <a href="${href}" class="video-card__title" title="${title}">${title}</a>
+        <div class="video-card__meta">
+          <span>${Number(video.views || 0).toLocaleString()}回視聴</span>
+          ${uploaded ? `<span title="${escapeHtml(uploaded.split(' ')[0])}">${escapeHtml(formatRelativeTime(uploaded))}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+}
+
+function setListStatus(text) {
+  const el = document.getElementById('video-list-loading');
+  if (el) el.textContent = text;
+}
+
+function loadVideos() {
+  const list = document.getElementById('video-list');
+  if (!list || listState.loading || listState.allLoaded) return;
+  listState.loading = true;
+  setListStatus('読み込み中...');
+  const params = new URLSearchParams({ action: 'list_videos', offset: listState.offset, limit: LIST_LIMIT, sort: listState.sort });
+  if (listState.query) params.set('q', listState.query);
+  fetch(`./index.php?${params}`)
+    .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
+    .then(videos => {
+      if (videos.length < LIST_LIMIT) listState.allLoaded = true;
+      listState.offset += videos.length;
+      list.insertAdjacentHTML('beforeend', videos.map(renderVideoCard).join(''));
+      setListStatus(listState.allLoaded ? '' : '読み込み中...');
+      listState.loading = false;
+      if (!listState.allLoaded) requestAnimationFrame(fillScreenIfNeeded);
+    })
+    .catch(() => {
+      listState.loading = false;
+      setListStatus('読み込みに失敗しました');
     });
-  });
-  document.querySelectorAll('img[src*="thumbnails/"]').forEach(img => {
-    if (!img.dataset.src) {
-      img.dataset.src = img.src;
-      img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjE4MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMzc0MTUxIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzlDQTNBRiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+';
-      img.classList.add('lazy-image');
-      imageObserver.observe(img);
-    }
-  });
 }
 
-function initCardAnimations() {
-  if (cardObserver) cardObserver.disconnect();
-  cardObserver = PerformanceUtils.createIntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const card = entry.target;
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(10px)';
-        requestAnimationFrame(() => {
-          card.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
-          card.style.opacity = '1';
-          card.style.transform = 'translateY(0)';
-        });
-        cardObserver.unobserve(card);
-      }
-    });
+// 下までスクロールしたら続きを読み込む
+function checkScrollPosition() {
+  if (document.documentElement.scrollHeight - (window.scrollY + window.innerHeight) < 600) loadVideos();
+}
+
+// 一覧が画面の高さに足りずスクロールできないときは、続きを読み込む（大きなモニターで列が多い場合など）
+function fillScreenIfNeeded() {
+  if (document.documentElement.scrollHeight - window.innerHeight < 600) loadVideos();
+}
+
+function changeSort(sortType) {
+  if (listState.sort === sortType) return;
+  document.cookie = `sort_preference=${sortType}; path=/; max-age=${30 * 24 * 60 * 60}`;
+  listState.sort = sortType;
+  document.querySelectorAll('.chips-bar .chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.sort === sortType);
+    chip.setAttribute('aria-pressed', chip.dataset.sort === sortType ? 'true' : 'false');
   });
-  document.querySelectorAll('.card-hover').forEach(card => { cardObserver.observe(card); });
+  const list = document.getElementById('video-list');
+  if (!list) return;
+  list.innerHTML = '';
+  Object.assign(listState, { offset: 0, loading: false, allLoaded: false });
+  loadVideos();
 }
 
-function initImageErrorHandling() {
-  document.querySelectorAll('img').forEach(img => {
-    if (!img.hasAttribute('data-error-handled')) {
-      img.setAttribute('data-error-handled', 'true');
-      img.addEventListener('error', function() {
-        if (this.src.includes('thumbnails/')) {
-          const rect = this.getBoundingClientRect();
-          if (rect.width <= 128 || rect.height <= 80) this.src = 'images/default-thumbnail-small.svg';
-          else this.src = 'images/default-thumbnail.svg';
-        } else {
-          this.src = 'images/default-thumbnail.svg';
-        }
-      });
-    }
-  });
-}
-
-function initLikeButtonState() {
-  const uniqueLikeCountup = window.uniqueLikeCountupSetting || false;
-  if (uniqueLikeCountup && currentVideo) {
-    const likeCountKey = `liked_${currentVideo}`;
-    const isLiked = sessionStorage.getItem(likeCountKey);
-    if (isLiked) {
-      const likeButton = document.getElementById('like-button');
-      const likeIcon = document.getElementById('like-icon');
-      if (likeButton && likeIcon) {
-        likeButton.classList.remove('bg-white/10');
-        likeButton.classList.add('bg-red-500/20', 'text-red-400', 'liked');
-        likeIcon.classList.remove('fill-none');
-        likeIcon.classList.add('fill-current');
-      }
-    }
-  }
-}
-
+// ===== 動画ページ =====
 function initVideoPlayer() {
-  const videoPlayer = document.getElementById('video-player');
-  if (!videoPlayer) return;
+  const player = document.getElementById('video-player');
+  if (!player) return;
   currentVideo = document.querySelector('meta[name="current-video"]')?.content || '';
-  uniqueCountup = window.uniqueCountupSetting || false;
   hasCountedView = false;
   initLikeButtonState();
-  function attemptAutoplay() {
-    const shouldAutoplay = (typeof window.autoplayEnabledSetting === 'boolean') ? window.autoplayEnabledSetting : true;
-    if (!shouldAutoplay) return;
-    if (videoPlayer.readyState >= 2) {
-      const playPromise = videoPlayer.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          videoPlayer.muted = true;
-          videoPlayer.play().catch(() => {});
-        });
-      }
-    }
-  }
+
   // 再生数は、実際に再生が始まったときにページを開くごとに1回だけ数える
   // （'play' だと一時停止→再開・シーク（スマホでは一時停止→再開になる）・見直しのたびに数えていた。
   //   'playing' はブラウザに止められた自動再生では発生しないため、見ていないのに数えることもない）
-  videoPlayer.addEventListener('playing', function() {
+  player.addEventListener('playing', () => {
     if (currentVideo && !hasCountedView) incrementViewCount(currentVideo);
   });
-  setTimeout(attemptAutoplay, 100);
+
+  // 続きから再生: 途中まで見ていたら、その位置から再生する
+  const saved = WatchProgress.get(currentVideo);
+  const resumeAt = saved && saved.time >= 5 && saved.time < saved.duration - 15 ? saved.time : 0;
+  const applyResume = () => {
+    if (resumeAt > 0 && resumeAt < player.duration - 5) {
+      player.currentTime = resumeAt;
+      showPlayerToast(`${formatDurationText(resumeAt)} から再生しています`, '最初から', () => { player.currentTime = 0; player.play().catch(() => {}); });
+    }
+  };
+  if (player.readyState >= 1) applyResume(); else player.addEventListener('loadedmetadata', applyResume, { once: true });
+
+  // 見た位置を記録する（5秒ごと・一時停止・ページを離れるとき）
+  let lastSaved = 0;
+  const saveProgress = () => WatchProgress.save(currentVideo, player.currentTime, player.duration);
+  player.addEventListener('timeupdate', () => {
+    if (Math.abs(player.currentTime - lastSaved) >= 5) { lastSaved = player.currentTime; saveProgress(); }
+  });
+  player.addEventListener('pause', saveProgress);
+  window.addEventListener('pagehide', saveProgress);
+  player.addEventListener('ended', () => { saveProgress(); startUpNext(); });
+
+  // 自動再生（サイトの設定がオン、または「次の動画」から来たとき）
+  const params = new URLSearchParams(location.search);
+  const shouldAutoplay = params.get('autoplay') === '1' || (typeof window.autoplayEnabledSetting === 'boolean' ? window.autoplayEnabledSetting : true);
+  if (shouldAutoplay) {
+    const tryPlay = () => {
+      player.play().catch(() => { player.muted = true; player.play().catch(() => {}); });
+    };
+    if (player.readyState >= 2) tryPlay(); else player.addEventListener('canplay', tryPlay, { once: true });
+  }
 }
 
+function showPlayerToast(message, actionLabel, onAction) {
+  const container = document.getElementById('watch-player');
+  if (!container) return;
+  container.querySelector('.player-toast')?.remove();
+  const toast = document.createElement('div');
+  toast.className = 'player-toast';
+  toast.innerHTML = `<span>${escapeHtml(message)}</span>${actionLabel ? `<button type="button">${escapeHtml(actionLabel)}</button>` : ''}`;
+  if (actionLabel) toast.querySelector('button').addEventListener('click', () => { onAction(); toast.remove(); });
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 8000);
+}
+
+// ===== 次の動画の自動再生 =====
+const AUTONEXT_KEY = 'mytube_autonext';
+function isAutoNextOn() {
+  try { return localStorage.getItem(AUTONEXT_KEY) !== '0'; } catch (_) { return true; }
+}
+function initAutoNextToggle() {
+  const toggle = document.getElementById('autoplay-next-toggle');
+  if (!toggle) return;
+  toggle.checked = isAutoNextOn();
+  toggle.addEventListener('change', () => {
+    try { localStorage.setItem(AUTONEXT_KEY, toggle.checked ? '1' : '0'); } catch (_) {}
+  });
+}
+function startUpNext() {
+  const next = document.querySelector('.related-item[data-video]');
+  const container = document.getElementById('watch-player');
+  if (!next || !container || !isAutoNextOn() || window.isSharedAccess) return;
+  const title = next.querySelector('.related-item__title')?.textContent || '';
+  const url = next.getAttribute('href') + '&autoplay=1';
+  let remaining = 5;
+  const overlay = document.createElement('div');
+  overlay.className = 'upnext-overlay';
+  overlay.innerHTML = `
+    <div class="upnext-overlay__label">次の動画</div>
+    <div class="upnext-overlay__title">${escapeHtml(title)}</div>
+    <div class="upnext-overlay__count"><span>${remaining}</span> 秒後に再生します</div>
+    <div class="upnext-overlay__buttons">
+      <button type="button" class="upnext-overlay__cancel">キャンセル</button>
+      <button type="button" class="upnext-overlay__play">今すぐ再生</button>
+    </div>`;
+  container.appendChild(overlay);
+  const timer = setInterval(() => {
+    remaining -= 1;
+    overlay.querySelector('.upnext-overlay__count span').textContent = remaining;
+    if (remaining <= 0) { clearInterval(timer); location.href = url; }
+  }, 1000);
+  overlay.querySelector('.upnext-overlay__cancel').addEventListener('click', () => { clearInterval(timer); overlay.remove(); });
+  overlay.querySelector('.upnext-overlay__play').addEventListener('click', () => { clearInterval(timer); location.href = url; });
+}
+
+// ===== 説明の「もっと見る」 =====
+function initDescription() {
+  const box = document.getElementById('watch-desc');
+  const text = document.getElementById('watch-desc-text');
+  const toggle = document.getElementById('watch-desc-toggle');
+  if (!box || !text || !toggle) return;
+  box.classList.add('is-collapsible');
+  // 3行に収まるなら折りたたまない
+  if (text.scrollHeight <= text.clientHeight + 2) {
+    box.classList.remove('is-collapsible');
+    return;
+  }
+  toggle.classList.remove('hidden');
+  const setOpen = open => {
+    box.classList.toggle('is-open', open);
+    toggle.textContent = open ? '一部を表示' : 'もっと見る';
+  };
+  box.addEventListener('click', e => {
+    if (!box.classList.contains('is-open') && !e.target.closest('a')) setOpen(true);
+  });
+  toggle.addEventListener('click', e => {
+    e.stopPropagation();
+    setOpen(!box.classList.contains('is-open'));
+  });
+}
+
+// ===== 再生数・いいね =====
 function incrementViewCount(videoFile) {
   const uniqueCount = window.uniqueCountupSetting;
   const viewCountKey = `viewed_${videoFile}`;
@@ -169,7 +289,6 @@ function incrementViewCount(videoFile) {
       if (data.success) {
         const viewCountElement = document.getElementById('view-count');
         if (viewCountElement) viewCountElement.textContent = data.views.toLocaleString();
-        updateSidebarViewCount(videoFile, data.views);
         if (uniqueCount) sessionStorage.setItem(viewCountKey, 'true'); // 制限 ON のときは同じタブの間は数えない
       } else {
         showNotification('再生数の更新に失敗しました', 'error');
@@ -178,377 +297,64 @@ function incrementViewCount(videoFile) {
     .catch(() => {});
 }
 
-function updateSidebarViewCount(videoFile, newCount) {
-  const sidebarCards = document.querySelectorAll('.sidebar .card-hover');
-  sidebarCards.forEach(card => {
-    const link = card.querySelector('a');
-    if (link && link.href.includes('v=' + encodeURIComponent(videoFile))) {
-      const viewCountElement = card.querySelector('.video-count-info');
-      if (viewCountElement) viewCountElement.textContent = newCount.toLocaleString();
-    }
-  });
+function initLikeButtonState() {
+  if (!window.uniqueLikeCountupSetting || !currentVideo) return;
+  if (sessionStorage.getItem(`liked_${currentVideo}`)) document.getElementById('like-button')?.classList.add('liked');
 }
 
 function toggleLike(videoFile) {
   const uniqueLike = window.uniqueLikeCountupSetting;
   const likeCountKey = `liked_${videoFile}`;
   if (uniqueLike && sessionStorage.getItem(likeCountKey)) return;
+  const likeButton = document.getElementById('like-button');
+  const likeCountElement = document.getElementById('like-count');
+  if (likeButton) {
+    likeButton.disabled = true;
+    likeButton.classList.remove('like-pop');
+    void likeButton.offsetWidth; // アニメーションをやり直すため
+    likeButton.classList.add('like-pop');
+  }
   const formData = new FormData();
   formData.append('action', 'toggle_like');
   formData.append('video_file', videoFile);
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
   if (csrf) formData.append('csrf_token', csrf);
   if (window.isSharedAccess && window.sharePassword) formData.append('share_password', window.sharePassword);
-  const likeButton = document.getElementById('like-button');
-  const likeIcon = document.getElementById('like-icon');
-  const likeCountElement = document.getElementById('like-count');
-  if (likeButton) { likeButton.disabled = true; likeButton.style.pointerEvents = 'none'; likeButton.classList.remove('animate-bounce', 'animate-pulse', 'liked'); }
-  if (likeButton && likeIcon) {
-    likeButton.classList.add('animate-bounce');
-    const handleAnimationEnd = () => { likeButton.classList.remove('animate-bounce'); likeButton.removeEventListener('animationend', handleAnimationEnd); };
-    likeButton.addEventListener('animationend', handleAnimationEnd);
-    createRippleEffect(likeButton);
-    createFloatingHearts(likeButton);
-  }
   fetch('./index.php', { method: 'POST', body: formData })
     .then(r => r.json())
     .then(data => {
       if (data.success) {
         if (uniqueLike) sessionStorage.setItem(likeCountKey, 'true');
-        if (likeCountElement) {
-          likeCountElement.textContent = data.likes.toLocaleString();
-          likeCountElement.classList.add('like-count-animate');
-          setTimeout(() => { likeCountElement.classList.remove('like-count-animate'); }, 500);
-        }
-        if (likeButton && likeIcon) {
-          likeButton.classList.remove('bg-white/10');
-          likeButton.classList.add('bg-red-500/20', 'text-red-400', 'liked');
-          likeIcon.classList.remove('fill-none');
-          likeIcon.classList.add('fill-current');
-          likeButton.classList.remove('animate-bounce');
-          likeButton.classList.add('animate-pulse');
-          const handlePulseAnimationEnd = () => { likeButton.classList.remove('animate-pulse'); likeButton.removeEventListener('animationend', handlePulseAnimationEnd); };
-          likeButton.addEventListener('animationend', handlePulseAnimationEnd);
-          setTimeout(() => { if (likeButton.classList.contains('animate-pulse')) likeButton.classList.remove('animate-pulse'); }, 1500);
-        }
-        updateSidebarLikeCount(videoFile, data.likes);
-        if (uniqueLike) sessionStorage.setItem(likeCountKey, 'true');
+        if (likeCountElement) likeCountElement.textContent = data.likes.toLocaleString();
+        likeButton?.classList.add('liked');
       } else {
         showNotification(data.message || 'いいねの更新に失敗しました', 'error');
-        if (likeButton) likeButton.classList.remove('animate-bounce', 'animate-pulse');
       }
     })
-    .catch(() => { if (likeButton) likeButton.classList.remove('animate-bounce', 'animate-pulse'); })
-    .finally(() => { if (likeButton) setTimeout(() => { likeButton.disabled = false; likeButton.style.pointerEvents = 'auto'; }, 300); });
+    .catch(() => showNotification('いいねの更新に失敗しました', 'error'))
+    .finally(() => { if (likeButton) setTimeout(() => { likeButton.disabled = false; }, 300); });
 }
 
-function createRippleEffect(button) {
-  const ripple = document.createElement('div');
-  ripple.className = 'like-ripple';
-  const rect = button.getBoundingClientRect();
-  const size = Math.max(rect.width, rect.height);
-  const centerX = rect.left + rect.width / 2 - size / 2;
-  const centerY = rect.top + rect.height / 2 - size / 2;
-  ripple.style.width = ripple.style.height = size + 'px';
-  ripple.style.left = centerX + 'px';
-  ripple.style.top = centerY + 'px';
-  document.body.appendChild(ripple);
-  setTimeout(() => { if (ripple.parentNode) ripple.parentNode.removeChild(ripple); }, 600);
+// ===== 共有 =====
+function shareText(title) {
+  const appName = document.querySelector('meta[name="app-name"]')?.getAttribute('content') || 'MyTube';
+  return title ? `${title} - ${appName}` : appName;
 }
 
-function createFloatingHearts(button) {
-  const heartSVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>`;
-  for (let i = 0; i < 5; i++) {
-    const heart = document.createElement('div');
-    heart.className = 'floating-heart';
-    heart.setAttribute('data-index', String(i));
-    heart.innerHTML = heartSVG;
-    const colors = ['#ef4444', '#f87171', '#fca5a5', '#fecaca', '#fef2f2'];
-    heart.style.color = colors[i % colors.length];
-    const buttonRect = button.getBoundingClientRect();
-    const centerX = buttonRect.left + buttonRect.width / 2;
-    const centerY = buttonRect.top + buttonRect.height / 2;
-    const randomX = (Math.random() - 0.5) * 30;
-    const randomY = Math.random() * 15;
-    heart.style.left = `${centerX + randomX}px`;
-    heart.style.top = `${centerY + randomY}px`;
-    document.body.appendChild(heart);
-    setTimeout(() => { if (heart.parentNode) heart.parentNode.removeChild(heart); }, 2100);
-  }
+function shareVideo(videoFile, title) {
+  const url = window.location.origin + window.location.pathname + '?v=' + encodeURIComponent(videoFile);
+  copyToClipboard(url);
+  if (navigator.share) navigator.share({ title: shareText(title), text: shareText(title), url }).catch(() => {});
 }
 
-function updateSidebarLikeCount(videoFile, newCount) {
-  const sidebarCards = document.querySelectorAll('.sidebar .card-hover');
-  sidebarCards.forEach(card => {
-    const link = card.querySelector('a');
-    if (link && link.href.includes('v=' + encodeURIComponent(videoFile))) {
-      const likeElements = card.querySelectorAll('.video-count-info');
-      if (likeElements.length >= 2) likeElements[1].textContent = newCount.toLocaleString();
-    }
-  });
-}
-
-function changeSort(sortType) {
-  const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
-  document.cookie = `sort_preference=${sortType}; path=/; max-age=${30 * 24 * 60 * 60}`;
-  window.CocoState.sort = sortType;
-  const newBtn = document.getElementById('sort-new-btn');
-  const popularBtn = document.getElementById('sort-popular-btn');
-  const viewsBtn = document.getElementById('sort-views-btn');
-  const likesBtn = document.getElementById('sort-likes-btn');
-  [newBtn, popularBtn, viewsBtn, likesBtn].forEach(btn => { if (btn) btn.classList.remove('active'); });
-  if (sortType === 'new' && newBtn) newBtn.classList.add('active');
-  else if (sortType === 'popular' && popularBtn) popularBtn.classList.add('active');
-  else if (sortType === 'views' && viewsBtn) viewsBtn.classList.add('active');
-  else if (sortType === 'likes' && likesBtn) likesBtn.classList.add('active');
-  resetVideoList(currentScrollTop);
-}
-
-function resetVideoList(savedScrollTop = null) {
-  offset = 0; loading = false; allLoaded = false; scrollCheckInProgress = false;
-  const list = document.getElementById('video-list');
-  const loadingElement = document.getElementById('video-list-loading');
-  if (savedScrollTop !== null) {
-    const currentHeight = list.scrollHeight;
-    const videoListContainer = list.parentElement;
-    const placeholder = document.createElement('div');
-    placeholder.id = 'scroll-placeholder';
-    placeholder.className = 'sorting-placeholder';
-    placeholder.style.height = currentHeight + 'px';
-    placeholder.style.minHeight = currentHeight + 'px';
-    placeholder.style.width = '100%';
-    placeholder.style.position = 'relative';
-    placeholder.style.overflow = 'hidden';
-    const loadingIndicator = document.createElement('div');
-    loadingIndicator.className = 'absolute top-4 left-1/2 transform -translate-x-1/2 flex items-center justify-center';
-    loadingIndicator.innerHTML = `<div class="flex items-center space-x-2 md:space-x-3 video-meta-info sorting-indicator rounded-xl px-3 md:px-6 py-3 md:py-4 shadow-lg whitespace-nowrap"><div class="animate-spin rounded-full h-5 w-5 md:h-6 md:w-6 border-2 border-blue-500 border-t-transparent flex-shrink-0"></div><span class="font-medium text-sm md:text-base">並び替え中...</span></div>`;
-    placeholder.appendChild(loadingIndicator);
-    list.classList.add('video-list-transition', 'fade-out');
-    setTimeout(() => {
-      list.style.display = 'none';
-      list.classList.remove('video-list-transition', 'fade-out');
-      videoListContainer.insertBefore(placeholder, list);
-      if (loadingElement) { loadingElement.style.display = 'none'; }
-      list.innerHTML = '';
-      loadVideosWithScrollRestore(savedScrollTop, () => {
-        requestAnimationFrame(() => {
-          placeholder.classList.add('fade-out');
-          setTimeout(() => {
-            if (placeholder.parentNode) placeholder.parentNode.removeChild(placeholder);
-            list.style.display = '';
-            list.classList.add('video-list-transition', 'fade-in');
-            setTimeout(() => { list.classList.remove('video-list-transition', 'fade-in'); }, 300);
-            if (loadingElement) { loadingElement.style.display = ''; }
-          }, 300);
-        });
-      });
-    }, 300);
-  } else {
-    list.innerHTML = '';
-    if (loadingElement) { loadingElement.style.display = ''; loadingElement.textContent = '読み込み中...'; }
-    loadVideos();
-  }
-}
-
-function renderVideoCard(video) {
-  const isActive = video.isActive;
-  const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, function(tag) {
-    const chars = {'&':'&amp;','<':'&lt;','>':'&gt;','\'':'&#39;','"':'&quot;'}; return chars[tag] || tag;
-  });
-  const title = esc(video.title || 'タイトルなし');
-  const views = Number(video.views).toLocaleString();
-  const likes = Number(video.likes).toLocaleString();
-  const likeRate = video.views > 0 ? Math.round((video.likes / video.views) * 1000) / 10 : 0;
-  let durationDisplay = '';
-  if (video.duration && video.duration.includes(':')) {
-    const parts = video.duration.split(':');
-    if (parts.length === 3) {
-      const hours = parseInt(parts[0]);
-      const minutes = parseInt(parts[1]);
-      const seconds = parseInt(parts[2]);
-      durationDisplay = hours > 0 ? `${hours}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}` : `${minutes}:${seconds.toString().padStart(2,'0')}`;
-    } else if (parts.length === 2) {
-      durationDisplay = video.duration;
-    }
-  }
-  const shareParam = window.isSharedAccess && window.sharePassword ? `&share=${encodeURIComponent(window.sharePassword)}` : '';
-  return `
-    <div class="group overflow-hidden optimize-rendering video-card transform transition-all duration-300 rounded-lg">
-      <a href="?v=${encodeURIComponent(video.video)}${shareParam}" class="block">
-        <div class="relative w-full aspect-video overflow-hidden">
-          <img class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110 lazy-image video-thumbnail" data-src="${esc(video.thumb)}" alt="${title}" loading="lazy" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjE4MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMzc0MTUxIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzlDQTNBRiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+">
-          ${durationDisplay ? `<div class="absolute bottom-2 right-2 bg-black/80 text-white text-sm md:text-xs px-2 py-1 rounded-md backdrop-blur-sm">${esc(durationDisplay)}</div>` : ''}
-          ${isActive ? `<div class="absolute inset-0 bg-gradient-to-t from-blue-500/30 to-transparent flex items-center justify-center"><div class="bg-blue-500/90 backdrop-blur-sm rounded-full p-2"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div></div>` : ''}
-        </div>
-        <div class="p-2 md:p-2 lg:p-3">
-          <h4 class="video-title-main text-base md:text-base lg:text-lg xl:text-xl font-semibold mb-1 line-clamp-2 transition-colors duration-300 break-words min-h-[2.5rem] md:min-h-[3rem] lg:min-h-[3.5rem] xl:min-h-[4rem]">${title}</h4>
-          <div class="flex items-center text-sm md:text-sm lg:text-base xl:text-lg video-meta-info mb-2 min-w-0">
-            <svg class="w-4 h-4 md:w-4 md:h-4 lg:w-5 lg:h-5 xl:w-6 xl:h-6 mr-1.5 md:mr-2 lg:mr-3 flex-shrink-0 video-meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-            <span class="truncate">${esc((video.upload_date || '').toString().split(' ')[0])}</span>
-          </div>
-          <div class="flex items-center justify-between flex-wrap gap-2">
-            <div class="flex items-center space-x-2 md:space-x-3 lg:space-x-4 xl:space-x-5 flex-wrap">
-              <div class="flex items-center text-sm md:text-sm lg:text-base xl:text-lg min-w-0">
-                <svg class="w-4 h-4 md:w-4 md:h-4 lg:w-5 lg:h-5 xl:w-6 xl:h-6 mr-1 video-meta-icon flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                <span class="font-medium video-count-info truncate">${views}</span>
-              </div>
-              <div class="flex items-center text-sm md:text-sm lg:text-base xl:text-lg min-w-0">
-                <svg class="w-4 h-4 md:w-4 md:h-4 lg:w-5 lg:h-5 xl:w-6 xl:h-6 mr-1 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-                <span class="font-medium video-count-info truncate">${likes}</span>
-              </div>
-            </div>
-            ${likeRate > 0 ? `<div class="flex items-center text-sm md:text-sm lg:text-base flex-shrink-0"><div class="flex items-center video-like-rate-badge px-2 py-1 rounded-full" title="いいね率（いいね数 ÷ 再生数）"><span class="video-like-rate-text text-xs opacity-75 mr-1">いいね率</span><span class="video-like-rate-text font-medium">${likeRate}%</span></div></div>` : ''}
-          </div>
-        </div>
-      </a>
-    </div>`;
-}
-
-function loadVideos() { loadVideosInternal(); }
-function loadVideosWithScrollRestore(savedScrollTop, cb = null) { loadVideosInternal(savedScrollTop, cb); }
-function loadVideosInternal(savedScrollTop = null, callback = null) {
-  if (loading || allLoaded || scrollCheckInProgress) return;
-  loading = true; scrollCheckInProgress = true;
-  const loadingElement = document.getElementById('video-list-loading');
-  if (loadingElement) loadingElement.style.display = '';
-  const sort = window.CocoState.sort || 'new';
-  const apiUrl = `./index.php?action=list_videos&offset=${offset}&limit=${limit}&sort=${encodeURIComponent(sort)}`;
-  fetch(apiUrl)
-    .then(async res => { if (!res.ok) { const text = await res.text(); throw new Error(`HTTP ${res.status}: ${text.slice(0,200)}`); } return res.json(); })
-    .then(videos => {
-      if (videos.length < limit) allLoaded = true;
-      offset += videos.length;
-      const list = document.getElementById('video-list');
-      if (list && videos.length > 0) {
-        const fragment = document.createDocumentFragment();
-        videos.forEach(video => { const tempDiv = document.createElement('div'); tempDiv.innerHTML = renderVideoCard(video); fragment.appendChild(tempDiv.firstElementChild); });
-        list.appendChild(fragment);
-        requestAnimationFrame(() => {
-          const newImages = list.querySelectorAll('img.lazy-image[data-src]');
-          if (newImages.length > 0 && imageObserver) newImages.forEach(img => imageObserver.observe(img));
-          const newCards = list.querySelectorAll('.card-hover');
-          if (newCards.length > 0 && cardObserver) newCards.forEach(card => cardObserver.observe(card));
-          if (savedScrollTop !== null) window.scrollTo({ top: savedScrollTop, behavior: 'instant' });
-          if (callback && typeof callback === 'function') callback();
-        });
-      } else {
-        if (savedScrollTop !== null) requestAnimationFrame(() => { window.scrollTo({ top: savedScrollTop, behavior: 'instant' }); });
-        if (callback && typeof callback === 'function') requestAnimationFrame(callback);
-      }
-      if (loadingElement) { if (allLoaded) loadingElement.textContent = 'すべて表示しました'; else loadingElement.style.display = ''; }
-      loading = false; scrollCheckInProgress = false;
-      if (!allLoaded) requestAnimationFrame(fillScreenIfNeeded);
-    })
-    .catch(() => {
-      loading = false; scrollCheckInProgress = false;
-      const loadingElement = document.getElementById('video-list-loading');
-      if (loadingElement) loadingElement.textContent = '読み込みに失敗しました';
-      if (savedScrollTop !== null) requestAnimationFrame(() => { window.scrollTo({ top: savedScrollTop, behavior: 'instant' }); });
-      if (callback && typeof callback === 'function') requestAnimationFrame(callback);
-    });
-}
-
-function checkScrollPosition() {
-  if (loading || allLoaded || scrollCheckInProgress) return;
-  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-  const windowHeight = window.innerHeight;
-  const documentHeight = document.documentElement.scrollHeight;
-  scrollDirection = scrollTop > lastScrollTop ? 'down' : 'up';
-  lastScrollTop = scrollTop;
-  if (scrollDirection === 'down' && (scrollTop + windowHeight) >= (documentHeight - 500)) {
-    loadVideos();
-  }
-}
-
-// 一覧が画面の高さに足りずスクロールできないときは、続きを読み込む
-// （続きはスクロールで読み込むため、大きなモニターで列が多いと最初の分しか表示されなくなる）
-function fillScreenIfNeeded() {
-  if (loading || allLoaded || scrollCheckInProgress) return;
-  if (document.documentElement.scrollHeight - window.innerHeight < 500) loadVideos();
-}
-
-const debouncedScrollCheck = PerformanceUtils.debounce(checkScrollPosition, 100);
-
-function initializeIndexPage() {
-  initLazyLoading();
-  initCardAnimations();
-  initImageErrorHandling();
-  initVideoPlayer();
-  initLikeButtonState();
-  loadVideos();
-  let currentUrl = window.location.href;
-  setInterval(() => {
-    if (window.location.href !== currentUrl) {
-      currentUrl = window.location.href;
-      currentVideo = document.querySelector('meta[name="current-video"]')?.content || '';
-      setTimeout(() => { initLikeButtonState(); }, 100);
-    }
-  }, 1000);
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-  initializeIndexPage();
-  // Initialize share buttons
-  setTimeout(() => {
-    initShareButton();
-    initShareLinkButton();
-    initShareLinkHelpPopover();
-  }, 100);
-  // Fallback: also try on window load
-  window.addEventListener('load', function() {
-    setTimeout(() => {
-      initShareButton();
-      initShareLinkButton();
-      initShareLinkHelpPopover();
-      initManualCopyButton();
-    }, 200);
-  });
-  // Periodic check for dynamically added buttons (max 10 tries)
-  let shareButtonCheckCount = 0;
-  const maxShareButtonChecks = 10;
-  (function checkShareButtonPeriodically(){
-    if (shareButtonCheckCount >= maxShareButtonChecks) return;
-    const shareButton = document.getElementById('share-button');
-    const shareLinkButton = document.getElementById('share-link-button');
-    if (shareButton && !shareButton._initialized) { shareButton._initialized = true; initShareButton(); }
-    if (shareLinkButton && !shareLinkButton._initialized) { shareLinkButton._initialized = true; initShareLinkButton(); }
-    const manualCopy = document.getElementById('manual-copy-copy');
-    if (manualCopy && !manualCopy._initialized) { manualCopy._initialized = true; initManualCopyButton(); }
-    if (!shareButton && !shareLinkButton) {
-      shareButtonCheckCount++;
-      setTimeout(checkShareButtonPeriodically, 500);
-    }
-  })();
-});
-
-window.toggleLike = toggleLike;
-window.incrementViewCount = incrementViewCount;
-window.changeSort = changeSort;
-
-window.addEventListener('scroll', debouncedScrollCheck, { passive: true });
-window.addEventListener('resize', PerformanceUtils.debounce(fillScreenIfNeeded, 200), { passive: true });
-document.addEventListener('visibilitychange', function() {
-  if (document.visibilityState === 'visible') initLikeButtonState();
-});
-
-// Share functions and initializers
-async function shareVideo(videoFile, title) {
-  try {
-    const currentUrl = window.location.origin + window.location.pathname + '?v=' + encodeURIComponent(videoFile);
-    const appNameMeta = document.querySelector('meta[name="app-name"]');
-    const appName = appNameMeta ? appNameMeta.getAttribute('content') : 'MyTube';
-    const shareText = title ? `${title} - ${appName}` : `${appName}で動画を視聴中`;
-    copyToClipboard(currentUrl);
-    if (navigator.share) {
-      navigator.share({ title: shareText, text: shareText, url: currentUrl }).catch(() => {});
-    }
-  } catch (_) {
-    const currentUrl = window.location.origin + window.location.pathname + '?v=' + encodeURIComponent(videoFile);
-    copyToClipboard(currentUrl);
-  }
+function showShareLinkArea(url) {
+  const area = document.getElementById('manual-copy-area');
+  const urlEl = document.getElementById('manual-copy-url');
+  if (area && urlEl) { urlEl.textContent = url; area.classList.remove('hidden'); }
 }
 
 async function generateShareLink(videoFile, title) {
+  const fallbackUrl = window.location.origin + window.location.pathname + '?v=' + encodeURIComponent(videoFile);
   try {
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
     const response = await fetch('api.php', {
@@ -558,226 +364,114 @@ async function generateShareLink(videoFile, title) {
       body: `action=generate_share_link&video_file=${encodeURIComponent(videoFile)}&csrf_token=${encodeURIComponent(csrf)}`
     });
     const data = await response.json();
-    if (data.success) {
-      const url = data.share_link;
-      const copyResult = await (async () => {
-        try { return await copyToClipboard(url); } catch (_) { return false; }
-      })();
-      // 共有リンクは成功時でも常に表示
-      (function showShareLinkArea() {
-        const area = document.getElementById('manual-copy-area');
-        const urlEl = document.getElementById('manual-copy-url');
-        if (area && urlEl) { urlEl.textContent = url; area.classList.remove('hidden'); }
-      })();
-      // 共有シートも起動（対応環境のみ）
-      try {
-        if (navigator.share) {
-          const appNameMeta = document.querySelector('meta[name="app-name"]');
-          const appName = appNameMeta ? appNameMeta.getAttribute('content') : 'MyTube';
-          const shareText = title ? `${title} - ${appName}` : `${appName}で動画を視聴中`;
-          navigator.share({ title: shareText, text: shareText, url }).catch(() => {});
-        }
-      } catch (_) {}
-      const isSecure = data.is_secure || false;
-      showNotification(isSecure ? 'ワンタイムパスワード付きの共有リンクが生成されました' : '動画リンクが生成されました（認証が必要）', isSecure ? 'success' : 'info');
-    } else {
-      const currentUrl = window.location.origin + window.location.pathname + '?v=' + encodeURIComponent(videoFile);
-      const copyResult = await (async () => {
-        try { return await copyToClipboard(currentUrl); } catch (_) { return false; }
-      })();
-      if (!copyResult && window.isIOS && window.isIOS()) {
-        const area = document.getElementById('manual-copy-area');
-        const urlEl = document.getElementById('manual-copy-url');
-        if (area && urlEl) { urlEl.textContent = currentUrl; area.classList.remove('hidden'); }
-      }
-      try {
-        if (navigator.share) {
-          const appNameMeta = document.querySelector('meta[name="app-name"]');
-          const appName = appNameMeta ? appNameMeta.getAttribute('content') : 'MyTube';
-          const shareText = title ? `${title} - ${appName}` : `${appName}で動画を視聴中`;
-          navigator.share({ title: shareText, text: shareText, url: currentUrl }).catch(() => {});
-        }
-      } catch (_) {}
-      showNotification('共有リンクの生成に失敗しました。現在のページURLをコピーしました。', 'warning');
-    }
+    if (!data.success) throw new Error('failed');
+    const url = data.share_link;
+    try { await copyToClipboard(url); } catch (_) {}
+    showShareLinkArea(url); // 共有リンクは成功時でも常に表示
+    if (navigator.share) navigator.share({ title: shareText(title), text: shareText(title), url }).catch(() => {});
+    const isSecure = data.is_secure || false;
+    showNotification(isSecure ? 'ワンタイムパスワード付きの共有リンクが生成されました' : '動画リンクが生成されました（認証が必要）', isSecure ? 'success' : 'info');
   } catch (_) {
-    const currentUrl = window.location.origin + window.location.pathname + '?v=' + encodeURIComponent(videoFile);
-    const copyResult = await (async () => {
-      try { return await copyToClipboard(currentUrl); } catch (_) { return false; }
-    })();
-    if (!copyResult && window.isIOS && window.isIOS()) {
-      const area = document.getElementById('manual-copy-area');
-      const urlEl = document.getElementById('manual-copy-url');
-      if (area && urlEl) { urlEl.textContent = currentUrl; area.classList.remove('hidden'); }
-    }
-    try {
-      if (navigator.share) {
-        const appNameMeta = document.querySelector('meta[name="app-name"]');
-        const appName = appNameMeta ? appNameMeta.getAttribute('content') : 'MyTube';
-        const shareText = title ? `${title} - ${appName}` : `${appName}で動画を視聴中`;
-        navigator.share({ title: shareText, text: shareText, url: currentUrl }).catch(() => {});
-      }
-    } catch (_) {}
+    let copied = false;
+    try { copied = await copyToClipboard(fallbackUrl); } catch (_) {}
+    if (!copied && window.isIOS && window.isIOS()) showShareLinkArea(fallbackUrl);
     showNotification('共有リンクの生成に失敗しました。現在のページURLをコピーしました。', 'warning');
   }
 }
 
-function initShareButton() {
+function initShareButtons() {
   const shareButton = document.getElementById('share-button');
   if (shareButton) {
-    const videoFile = shareButton.getAttribute('data-video');
-    const title = shareButton.getAttribute('data-title');
-    shareButton.removeEventListener('click', shareButton._shareClickHandler);
-    shareButton._shareClickHandler = function(e) { e.preventDefault(); shareVideo(videoFile, title); };
-    shareButton.addEventListener('click', shareButton._shareClickHandler);
+    shareButton.addEventListener('click', e => { e.preventDefault(); shareVideo(shareButton.dataset.video, shareButton.dataset.title); });
   }
-}
-
-function initShareLinkButton() {
   const shareLinkButton = document.getElementById('share-link-button');
   if (shareLinkButton) {
-    const videoFile = shareLinkButton.getAttribute('data-video');
-    const title = shareLinkButton.getAttribute('data-title');
-    shareLinkButton.removeEventListener('click', shareLinkButton._shareLinkClickHandler);
-    shareLinkButton._shareLinkClickHandler = function(e) { e.preventDefault(); generateShareLink(videoFile, title); };
-    shareLinkButton.addEventListener('click', shareLinkButton._shareLinkClickHandler);
+    shareLinkButton.addEventListener('click', e => { e.preventDefault(); generateShareLink(shareLinkButton.dataset.video, shareLinkButton.dataset.title); });
   }
-}
-
-function initManualCopyButton() {
-  const btn = document.getElementById('manual-copy-copy');
+  const copyButton = document.getElementById('manual-copy-copy');
   const urlEl = document.getElementById('manual-copy-url');
-  if (!btn || !urlEl) return;
-  btn.removeEventListener('click', btn._manualCopyHandler);
-  btn._manualCopyHandler = function(e) {
-    e.preventDefault();
-    const text = urlEl.textContent || '';
-    if (!text) return;
-    // ユーザー操作直後の文脈でコピー
-    const result = copyToClipboard(text);
-    // 非同期/同期両対応
-    if (result && typeof result.then === 'function') {
-      result.then((ok) => { if (!ok) showManualCopyNotification(text); });
-    }
-  };
-  btn.addEventListener('click', btn._manualCopyHandler);
+  if (copyButton && urlEl) {
+    copyButton.addEventListener('click', e => {
+      e.preventDefault();
+      const text = urlEl.textContent || '';
+      if (!text) return;
+      const result = copyToClipboard(text);
+      if (result && typeof result.then === 'function') result.then(ok => { if (!ok) showManualCopyNotification(text); });
+    });
+  }
+  initShareLinkHelpPopover();
 }
 
-// Admin-only: share-link help popover
+// 管理者のみ: 「共有リンクとは？」の説明（クリックで開閉）
 function initShareLinkHelpPopover() {
   const helpBtn = document.getElementById('share-link-help');
-  const originalPop = document.getElementById('share-link-popover');
-  if (!helpBtn || !originalPop) return;
-  // 二重初期化防止
-  if (helpBtn._shareHelpInitialized) return;
-  helpBtn._shareHelpInitialized = true;
-
-  let isOpen = false;
-  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const pop = document.getElementById('share-link-popover');
+  if (!helpBtn || !pop) return;
   let portal = null;
-  let teardownFns = [];
-
-  function createPortalIfNeeded() {
-    if (portal) return;
-    portal = document.createElement('div');
-    portal.id = 'share-link-popover-portal';
-    // 継承: hidden クラスは削除した状態で反映
-    portal.className = originalPop.className.replace(/\bhidden\b/, '').trim();
-    portal.style.position = 'fixed';
-    portal.style.zIndex = '9999';
-    portal.style.maxWidth = 'min(18rem, calc(100vw - 1rem))';
-    portal.innerHTML = originalPop.innerHTML;
-    document.body.appendChild(portal);
-  }
-
-  function positionPortal() {
-    if (!portal) return;
-    // 一旦表示してサイズ計測
-    const prevVisibility = portal.style.visibility;
-    const prevDisplay = portal.style.display;
-    portal.style.visibility = 'hidden';
-    portal.style.display = 'block';
-
-    const btnRect = helpBtn.getBoundingClientRect();
-    const portalWidth = portal.offsetWidth;
-    const portalHeight = portal.offsetHeight;
-    const margin = 8;
-    let top = btnRect.bottom + margin;
-    let left = Math.min(
-      window.innerWidth - portalWidth - margin,
-      Math.max(margin, btnRect.right - portalWidth)
-    );
-    // 画面下に収まらない場合は上側に表示
-    if (top + portalHeight > window.innerHeight - margin) {
-      const aboveTop = btnRect.top - margin - portalHeight;
-      if (aboveTop >= margin) {
-        top = aboveTop;
-      } else {
-        // それでも収まらない場合は高さを制限してスクロール
-        top = Math.max(margin, aboveTop);
-        portal.style.maxHeight = (window.innerHeight - margin * 2) + 'px';
-        portal.style.overflow = 'auto';
-      }
-    }
-    portal.style.top = top + 'px';
-    portal.style.left = left + 'px';
-
-    portal.style.visibility = prevVisibility || 'visible';
-    portal.style.display = prevDisplay || 'block';
-  }
-
-  function destroyPortal() {
-    if (portal && portal.parentNode) {
-      portal.parentNode.removeChild(portal);
-    }
+  const close = () => {
+    portal?.remove();
     portal = null;
-  }
-
-  function open() {
-    if (isOpen) return;
-    // 元の要素はクリップされるので使わず、ポータル表示
-    createPortalIfNeeded();
-    positionPortal();
-    helpBtn.setAttribute('aria-expanded', 'true');
-    isOpen = true;
-    // スクロールやリサイズで位置更新/クローズ
-    const onScroll = () => { if (isOpen) positionPortal(); };
-    const onResize = () => { if (isOpen) positionPortal(); };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onResize);
-    teardownFns.push(() => window.removeEventListener('scroll', onScroll));
-    teardownFns.push(() => window.removeEventListener('resize', onResize));
-  }
-  function close() {
-    if (!isOpen) return;
-    destroyPortal();
     helpBtn.setAttribute('aria-expanded', 'false');
-    isOpen = false;
-    // 後処理
-    teardownFns.forEach(fn => { try { fn(); } catch (_) {} });
-    teardownFns = [];
-  }
-  function toggle(e) {
-    e?.preventDefault?.();
-    isOpen ? close() : open();
-  }
-
-  // クリックのみで開閉（ホバーやフォーカスでは開かない）
-  helpBtn.addEventListener('click', toggle);
-
-  // 外側クリックで閉じる（デスクトップ/タッチ共通）
-  document.addEventListener('click', (e) => {
-    if (!isOpen) return;
-    const t = e.target;
-    if (t === helpBtn || helpBtn.contains(t) || (portal && (t === portal || portal.contains(t)))) return;
-    close();
-  });
-
-  // ESC to close
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  };
+  const open = () => {
+    portal = document.createElement('div');
+    portal.className = pop.className.replace(/\bhidden\b/, '').trim();
+    portal.innerHTML = pop.innerHTML;
+    Object.assign(portal.style, { position: 'fixed', zIndex: '9999', maxWidth: 'min(18rem, calc(100vw - 1rem))' });
+    document.body.appendChild(portal);
+    const r = helpBtn.getBoundingClientRect();
+    portal.style.top = `${Math.min(r.bottom + 8, window.innerHeight - portal.offsetHeight - 8)}px`;
+    portal.style.left = `${Math.max(8, Math.min(window.innerWidth - portal.offsetWidth - 8, r.right - portal.offsetWidth))}px`;
+    helpBtn.setAttribute('aria-expanded', 'true');
+  };
+  helpBtn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); portal ? close() : open(); });
+  document.addEventListener('click', e => { if (portal && !portal.contains(e.target)) close(); });
+  window.addEventListener('scroll', close, { passive: true });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
 }
 
-// expose for compatibility
+// ===== 初期化 =====
+document.addEventListener('DOMContentLoaded', () => {
+  const list = document.getElementById('video-list');
+  if (list) {
+    const cookieSort = getCookieValue('sort_preference');
+    if (['new', 'popular', 'views', 'likes'].includes(cookieSort)) listState.sort = cookieSort;
+    listState.query = list.dataset.query || '';
+    loadVideos();
+    window.addEventListener('scroll', PerformanceUtils.debounce(checkScrollPosition, 100), { passive: true });
+    window.addEventListener('resize', PerformanceUtils.debounce(fillScreenIfNeeded, 200), { passive: true });
+  }
+  initVideoPlayer();
+  initAutoNextToggle();
+  initDescription();
+  decorateRelatedProgress();
+  initShareButtons();
+});
+
+// 戻るボタンで一覧に戻ったとき（ページがキャッシュから表示される）にも赤いバーを最新にする
+window.addEventListener('pageshow', e => {
+  if (!e.persisted) return;
+  document.querySelectorAll('.video-card').forEach(card => {
+    const link = card.querySelector('a.thumb');
+    const video = link ? new URLSearchParams(link.getAttribute('href').slice(1)).get('v') : '';
+    if (!video) return;
+    link.querySelector('.watch-progress')?.remove();
+    link.insertAdjacentHTML('beforeend', progressBarHtml(video));
+  });
+  document.querySelectorAll('.related-item .watch-progress').forEach(el => el.remove());
+  decorateRelatedProgress();
+});
+
+// 画像が読み込めないときは既定のサムネイルにする
+document.addEventListener('error', e => {
+  const img = e.target;
+  if (img.tagName === 'IMG' && img.closest('.thumb') && !img.dataset.fallback) {
+    img.dataset.fallback = '1';
+    img.src = 'images/default-thumbnail.svg';
+  }
+}, true);
+
+window.toggleLike = toggleLike;
+window.incrementViewCount = incrementViewCount;
+window.changeSort = changeSort;
 window.shareVideo = shareVideo;
-
-

@@ -39,7 +39,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'list_videos') {
         $sort = 'new';
     }
 
-    $all = getSortedVideos($sort);
+    $all = getSortedVideos($sort, normalizeSearchQuery($_GET['q'] ?? ''));
     $slice = array_slice($all, $offset, $limit);
 
     $mapped = array_map(function($v) {
@@ -59,8 +59,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'list_videos') {
     exit;
 }
 
-// 動画一覧を取得（構造化データ）
+// 動画一覧を取得（構造化データ。公開中のすべて）
 $videos = getSortedVideos();
+
+// 検索語（ヘッダーの検索欄から）と、一致した件数
+$searchQuery = normalizeSearchQuery($_GET['q'] ?? '');
+$resultCount = $searchQuery !== '' ? count(getSortedVideos('new', $searchQuery)) : count($videos);
 
 // ファイル名だけの配列（旧レイアウト互換）
 $videoFiles = array_values(array_filter(array_map(function($v){
@@ -147,7 +151,7 @@ if (count($videoFiles) > 1 && $currentVideo) {
     $availableVideos = array_values(array_filter($videoFiles, fn($v) => $v !== $currentVideo));
     if (count($availableVideos) > 0) {
         shuffle($availableVideos);
-        $randomVideos = array_slice($availableVideos, 0, min(8, count($availableVideos)));
+        $randomVideos = array_slice($availableVideos, 0, min(12, count($availableVideos)));
     }
 }
 
@@ -171,7 +175,7 @@ if ($currentVideo && $currentTitle) {
 } else {
     $pageTitle = Config::get('app.name', 'MyTube');
 }
-$pageCss = 'index';
+$pageCss = 'home';
 ?>
 
 <!DOCTYPE html>
@@ -202,276 +206,171 @@ $pageCss = 'index';
   <meta name="share-password" content="<?= $isSharedAccess ? htmlspecialchars($sharePassword, ENT_QUOTES, 'UTF-8') : '' ?>">
 
   <!-- メインコンテンツ -->
+  <?php
+    $siteName = Config::get('app.name', 'MyTube');
+    $squareLogo = is_file(__DIR__ . '/data/branding/logo-square.png') ? 'data/branding/logo-square.png' : 'images/logo.png';
+  ?>
   <?php if ($currentVideo): ?>
-    <?php 
-      $videoMimeTypes = [
-        'mp4' => 'video/mp4', 'webm' => 'video/webm', 'ogg' => 'video/ogg',
-        'avi' => 'video/x-msvideo', 'mov' => 'video/quicktime', 'mkv' => 'video/x-matroska', 'flv' => 'video/x-flv'
-      ];
-      $ext = strtolower(pathinfo($currentVideo, PATHINFO_EXTENSION));
-      $mimeType = $videoMimeTypes[$ext] ?? 'video/mp4';
+    <?php
+      $currentDurationSeconds = (int)($currentMetadata['duration'] ?? 0);
+      $currentUploadDateTime = $currentMetadata['upload_date'] ?? (file_exists("videos/$currentVideo") ? date('Y-m-d H:i:s', filemtime("videos/$currentVideo")) : null);
     ?>
-    <div class="flex flex-col lg:flex-row w-full max-w-[2560px] mx-auto px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-20 3xl:px-24 gap-4 overflow-visible mt-2 md:mt-2">
-      <!-- メインエリア（動画プレイヤーと動画情報） -->
-      <div class="flex-1 min-w-0 flex flex-col max-w-full overflow-hidden">
-        <div class="animate-fade-in w-full pt-2 md:pt-4 lg:pt-6">
-          <!-- 動画プレイヤー -->
-          <div class="video-player-container w-full aspect-video relative max-w-full rounded-lg md:rounded-xl lg:rounded-2xl overflow-hidden mb-4">
-            <video id="video-player" controls <?= $autoplayEnabled ? 'autoplay' : '' ?> class="absolute top-0 left-0 w-full h-full object-contain bg-black block" poster="<?= $currentThumbUrl ?: 'images/default-thumbnail.svg' ?>" preload="metadata">
-              <source src="videos/<?= urlencode($currentVideo) ?>" type="video/mp4">
-              お使いのブラウザは動画の再生に対応していません。
-            </video>
-          </div>
-          
-          <!-- 動画情報 -->
-          <div class="video-info-container md:backdrop-blur-md md:rounded-xl mb-6">
-            <?php if ($isSharedAccess): ?>
-            <div class="mb-4 p-3 bg-blue-100 border-blue-300 border rounded-lg" style="background-color: var(--blue-100); border-color: var(--blue-300);">
-              <div class="flex items-center gap-2 text-blue-800" style="color: var(--blue-800);">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
-                </svg>
-                <span class="text-sm font-medium">
-                  ワンタイムパスワード付き共有リンクでアクセス中 - この動画は認証なしで閲覧できます
-                </span>
-              </div>
-            </div>
-            <?php endif ?>
-            <div class="flex flex-col md:flex-row md:items-start md:justify-between">
-              <div class="flex-1 min-w-0">
-                <div class="mb-4">
-                  <?php if ($isPrivatePreview): ?>
-                  <p class="inline-block mb-2 px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 video-meta-info">非公開（管理者だけが見られます）</p>
-                  <?php endif ?>
-                  <h1 class="video-title-current font-bold leading-tight m-0"><?= htmlspecialchars($currentTitle) ?: 'タイトルなし' ?></h1>
-                </div>
-                <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
-                  <div class="flex items-center gap-6 flex-wrap">
-                    <div class="flex items-center gap-1">
-                      <span class="text-lg font-semibold video-title-main"><?= number_format($viewCount) ?></span>
-                      <span class="text-sm video-meta-info">回再生</span>
-                    </div>
-                    <div class="flex items-center gap-1">
-                      <span class="text-sm video-meta-info font-medium">公開日:</span>
-                      <span class="text-sm video-meta-info"><?= $currentUploadDate ?></span>
-                    </div>
-                    <?php if (!empty($currentMetadata['duration'])): ?>
-                    <div class="flex items-center gap-1">
-                      <span class="text-sm video-meta-info font-medium">長さ:</span>
-                      <span class="text-sm video-meta-info"><?= formatDuration($currentMetadata['duration']) ?></span>
-                    </div>
-                    <?php endif ?>
-                  </div>
-                  <div class="flex items-center">
-                    <div class="flex items-center gap-3">
-                      <button id="like-button" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer border-none bg-white/10 video-button-text hover:bg-red-500/20 hover:text-red-400 hover:-translate-y-0.5 active:scale-95 relative overflow-visible" onclick="toggleLike('<?= urlencode($currentVideo) ?>')">
-                        <svg id="like-icon" class="w-5 h-5 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-                        <span id="like-count" class="font-medium"><?= number_format($likeCount) ?></span>
-                      </button>
-                      <?php if (!$isSharedAccess): ?>
-                      <button id="share-button" data-video="<?= urlencode($currentVideo) ?>" data-title="<?= htmlspecialchars($currentTitle) ?>" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer border-none bg-blue-500/10 video-button-text hover:bg-blue-500/20 hover:-translate-y-0.5 active:scale-95" style="background-color: var(--blue-500-10);">
-                        <svg class="w-5 h-5 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path></svg>
-                        <span class="font-medium">共有</span>
-                      </button>
-                      <?php if (isAdmin() && isPasswordProtectionEnabled()): ?>
-                      <button id="share-link-button" data-video="<?= urlencode($currentVideo) ?>" data-title="<?= htmlspecialchars($currentTitle) ?>" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer border-none bg-green-500/10 video-button-text hover:bg-green-500/20 hover:-translate-y-0.5 active:scale-95" style="background-color: var(--green-500-10);">
-                        <svg class="w-5 h-5 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
-                        <span class="font-medium">共有リンク</span>
-                      </button>
-                      <?php endif ?>
-                      <?php endif ?>
-                    </div>
-                  </div>
-                  <?php if (isAdmin() && isPasswordProtectionEnabled()): ?>
-                  <div class="w-full mt-1 flex justify-end">
-                    <button id="share-link-help" type="button" aria-haspopup="dialog" aria-controls="share-link-popover" aria-expanded="false" class="px-2 py-1 rounded text-xs underline video-button-text hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-500" title="共有リンクの仕様">共有リンクとは？</button>
-                    <div id="share-link-popover" class="hidden absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] px-3 py-3 rounded-lg shadow-lg text-sm z-50 bg-black/80 text-white" role="dialog" aria-label="共有リンクの仕様" tabindex="-1">
-                      <div class="space-y-1 leading-relaxed">
-                        <p>24時間有効の閲覧用リンクを発行します。</p>
-                        <p>受け取ったユーザーはログイン不要でこの動画を閲覧できます。</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div id="manual-copy-area" class="w-full mt-2 hidden">
-                    <div class="video-info-container rounded-lg p-3">
-                      <div class="text-xs md:text-sm video-meta-info flex items-start gap-2">
-                        <div class="flex-1 min-w-0">
-                          <span class="font-medium">共有リンク：</span>
-                          <span id="manual-copy-url" class="break-all"></span>
-                        </div>
-                        <button id="manual-copy-copy" type="button" class="px-2 py-1 rounded text-xs video-button-text hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-nowrap" aria-label="コピー" title="コピー">
-                          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <rect x="9" y="9" width="11" height="11" rx="2" ry="2" stroke-width="2"></rect>
-                            <rect x="4" y="4" width="11" height="11" rx="2" ry="2" stroke-width="2"></rect>
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <?php endif ?>
-                </div>
-                <?php if ($currentComment): ?>
-                  <div class="border-t border-[color:var(--table-border)] pt-4"><div class="text-base leading-relaxed video-meta-info whitespace-pre-wrap break-words"><?= htmlspecialchars(trim($currentComment)) ?></div></div>
-                <?php endif ?>
-              </div>
-            </div>
-          </div>
+    <main class="watch" data-video="<?= htmlspecialchars($currentVideo) ?>">
+      <div class="watch__primary">
+        <!-- 動画プレイヤー -->
+        <div class="watch-player" id="watch-player">
+          <video id="video-player" controls playsinline <?= $autoplayEnabled ? 'autoplay' : '' ?> poster="<?= htmlspecialchars($currentThumbUrl ?: 'images/default-thumbnail.svg') ?>" preload="metadata">
+            <source src="videos/<?= urlencode($currentVideo) ?>" type="video/mp4">
+            お使いのブラウザは動画の再生に対応していません。
+          </video>
         </div>
-      </div>
-      <!-- サイドバー（ランダム動画） -->
-      <div class="w-full lg:w-1/3 xl:w-1/3 2xl:w-1/4 3xl:w-1/4 4xl:w-1/5 flex flex-col flex-shrink-0 overflow-y-auto">
-        <div class="mobile-sidebar-header flex-shrink-0">
-          <h3 class="font-semibold video-title-main my-2 md:my-3 lg:my-4 flex items-center">
-            <svg class="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 mr-2 md:mr-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--accent-color);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
-            おすすめ動画
-          </h3>
-        </div>
-        <div class="flex flex-col space-y-3 md:space-y-4">
-          <?php if ($isSharedAccess): ?>
-            <!-- 共有リンクアクセス時は非表示（未認証ユーザーのみ） -->
-            <div class="video-info-container rounded-lg md:rounded-xl lg:rounded-2xl p-4 md:p-6 lg:p-8 text-center">
-              <div class="w-12 h-12 md:w-16 md:h-16 lg:w-20 lg:h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4" style="background-color: var(--blue-100);">
-                <svg class="w-6 h-6 md:w-8 md:h-8 lg:w-10 lg:h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--blue-600);">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
-                </svg>
-              </div>
-              <p class="video-meta-info text-sm md:text-base lg:text-lg font-medium text-gray-600 mb-2" style="color: var(--gray-600);">共有リンクでアクセス中</p>
-              <p class="video-meta-info text-xs md:text-sm lg:text-base text-gray-500" style="color: var(--gray-500);">おすすめ動画は表示できません</p>
-            </div>
-          <?php elseif (!empty($randomVideos)): ?>
-            <?php foreach ($randomVideos as $video): 
-              $basename = pathinfo($video, PATHINFO_FILENAME);
-              $thumbPath = "thumbnails/{$basename}.jpg";
-              $thumbUrl = file_exists($thumbPath) ? ($thumbPath . '?v=' . filemtime($thumbPath)) : 'images/default-thumbnail-small.svg';
-              $metadata = getVideoMetadata($basename);
-              $title = $metadata['title'] ?? 'タイトルなし';
-              $uploadDate = $metadata['upload_date'] ? date('Y-m-d', strtotime($metadata['upload_date'])) : (file_exists("videos/$video") ? date('Y-m-d', filemtime("videos/$video")) : '');
-              $videoViewCount = $metadata['views'] ?? 0;
-              $videoLikeCount = $metadata['likes'] ?? 0;
-              $videoDuration = $metadata['duration'] ?? null;
-              $durationDisplay = formatDuration($videoDuration);
-            ?>
-              <div class="recommended-video-card rounded-lg md:rounded-xl overflow-hidden transition-transform duration-200 mobile-video-card">
-                <a href="?v=<?= urlencode($video) ?><?= $isSharedAccess ? '&share=' . urlencode($sharePassword) : '' ?>" class="block">
-                  <div class="flex min-h-0 items-start">
-                    <div class="relative w-32 md:w-28 lg:w-32 xl:w-36 2xl:w-40 flex-shrink-0 rounded-lg overflow-hidden aspect-video self-start">
-                      <img class="w-full h-full object-cover object-center" src="<?= $thumbUrl ?>" alt="<?= htmlspecialchars($title) ?>" loading="lazy">
-                      <?php if (!empty($videoDuration)): ?>
-                      <div class="video-duration-badge absolute bottom-1 right-1 text-xs px-1 py-0.5 rounded backdrop-blur-sm"><?= $durationDisplay ?></div>
-                      <?php endif ?>
-                    </div>
-                    <div class="flex-1 px-2 md:px-3 lg:px-4 min-w-0">
-                      <h4 class="video-title-sidebar font-bold mb-2 md:mb-3 truncate"><?= htmlspecialchars($title) ?: 'タイトルなし' ?></h4>
-                      <div class="flex flex-col space-y-1 md:space-y-2 text-sm md:text-sm lg:text-base video-meta-info">
-                        <div class="flex items-center">
-                          <svg class="w-4 h-4 md:w-3 md:h-3 lg:w-4 lg:h-4 mr-1 flex-shrink-0 video-meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                          <span class="truncate text-sm md:text-sm"><?= $uploadDate ?></span>
-                        </div>
-                        <div class="flex items-center space-x-2 md:space-x-3 lg:space-x-4">
-                          <div class="flex items-center min-w-0">
-                            <svg class="w-4 h-4 md:w-3 md:h-3 lg:w-4 lg:h-4 mr-1 flex-shrink-0 video-meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                            <span class="font-medium video-count-info truncate text-sm md:text-sm"><?= number_format($videoViewCount) ?></span>
-                          </div>
-                          <div class="flex items-center min-w-0">
-                            <svg class="w-4 h-4 md:w-3 md:h-3 lg:w-4 lg:h-4 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-                            <span class="font-medium video-count-info truncate text-sm md:text-sm"><?= number_format($videoLikeCount) ?></span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </a>
-              </div>
-            <?php endforeach ?>
-          <?php else: ?>
-            <div class="video-info-container rounded-lg md:rounded-xl lg:rounded-2xl p-4 md:p-6 lg:p-8 text-center">
-              <p class="video-meta-info text-xs md:text-sm lg:text-base">おすすめ動画がありません</p>
-            </div>
-          <?php endif ?>
-        </div>
-      </div>
-    </div>
-  <?php else: ?>
-    <?php if (empty($videos)): ?>
-      <div class="mx-auto p-2 md:p-4 lg:p-6 xl:p-8 px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-20 3xl:px-24">
-        <div class="text-center py-8 md:py-16 lg:py-24 animate-fade-in max-w-4xl mx-auto">
-          <div class="video-info-container rounded-xl md:rounded-2xl lg:rounded-3xl p-8 md:p-12 lg:p-16 max-w-2xl mx-auto">
-            <div class="w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 empty-video-icon-bg rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 lg:mb-8">
-              <svg class="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 video-meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-            </div>
-            <h2 class="font-bold video-title-main mb-3 md:mb-4 lg:mb-6">まだ動画がありません</h2>
-          </div>
-        </div>
-      </div>
-    <?php endif ?>
-  <?php endif ?>
 
-  <!-- 動画一覧セクション（ページ下部） -->
-  <?php if ($isSharedAccess): ?>
-    <!-- 共有リンクアクセス時は非表示（未認証ユーザーのみ） -->
-    <div class="w-full mx-auto p-2 md:p-4 lg:p-6 xl:p-8 px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-20 3xl:px-24 <?= $currentVideo ? 'mt-8 lg:mt-12' : 'mt-2 lg:mt-0' ?>">
-      <div class="video-info-container rounded-xl md:rounded-2xl lg:rounded-3xl p-8 md:p-12 lg:p-16 max-w-2xl mx-auto text-center">
-        <div class="w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 lg:mb-8" style="background-color: var(--blue-100);">
-                      <svg class="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--blue-600);">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
-          </svg>
-        </div>
-        <h2 class="font-bold video-title-main mb-3 md:mb-4 lg:mb-6">共有リンクでアクセス中</h2>
-        <p class="text-sm md:text-base lg:text-lg video-meta-info text-gray-600 mb-2" style="color: var(--gray-600);">動画一覧は表示できません</p>
-        <p class="text-xs md:text-sm lg:text-base video-meta-info text-gray-500" style="color: var(--gray-500);">共有された動画のみ閲覧可能です</p>
-      </div>
-    </div>
-  <?php elseif (!empty($videos)): ?>
-  <div class="w-full mx-auto p-2 md:p-4 lg:p-6 xl:p-8 px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-20 3xl:px-24 <?= $currentVideo ? 'mt-8 lg:mt-12' : 'mt-2 lg:mt-0' ?>">
-    <div class="mb-6 lg:mb-8 w-full">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between">
-        <div class="flex items-center mb-4 md:mb-0">
-          <div class="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3 md:mr-4 lg:mr-6" style="background: linear-gradient(to right, var(--blue-600), var(--accent-color));">
-            <svg class="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+        <div class="watch-info">
+          <?php if ($isSharedAccess): ?>
+          <p class="watch-notice">共有リンクで表示しています（24時間有効）。この動画だけを見ることができます。</p>
+          <?php endif ?>
+          <?php if ($isPrivatePreview): ?>
+          <p class="watch-badge">非公開（管理者だけが見られます）</p>
+          <?php endif ?>
+
+          <h1 class="watch-title"><?= htmlspecialchars($currentTitle) ?: 'タイトルなし' ?></h1>
+
+          <div class="watch-row">
+            <div class="watch-channel">
+              <img src="<?= htmlspecialchars($squareLogo) ?>?v=<?= getAssetVersion($squareLogo) ?>" alt="" class="watch-channel__icon">
+              <span class="watch-channel__name"><?= htmlspecialchars($siteName) ?></span>
+            </div>
+            <div class="watch-actions">
+              <button id="like-button" type="button" class="pill-btn" onclick="toggleLike('<?= urlencode($currentVideo) ?>')" aria-label="いいね">
+                <svg id="like-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                <span id="like-count"><?= number_format($likeCount) ?></span>
+              </button>
+              <?php if (!$isSharedAccess): ?>
+              <button id="share-button" type="button" class="pill-btn" data-video="<?= urlencode($currentVideo) ?>" data-title="<?= htmlspecialchars($currentTitle) ?>">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7-7 7M21 12H9a6 6 0 00-6 6v1"/></svg>
+                <span>共有</span>
+              </button>
+              <?php if (isAdmin() && isPasswordProtectionEnabled()): ?>
+              <button id="share-link-button" type="button" class="pill-btn" data-video="<?= urlencode($currentVideo) ?>" data-title="<?= htmlspecialchars($currentTitle) ?>">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                <span>共有リンク</span>
+              </button>
+              <button id="share-link-help" type="button" class="icon-btn watch-help" aria-haspopup="dialog" aria-controls="share-link-popover" aria-expanded="false" title="共有リンクとは？" aria-label="共有リンクとは？">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M9.5 9.5a2.5 2.5 0 114 2c-.8.5-1.5 1-1.5 2M12 17h.01"/></svg>
+              </button>
+              <div id="share-link-popover" class="hidden watch-popover" role="dialog" aria-label="共有リンクの仕様" tabindex="-1">
+                <p>24時間有効の閲覧用リンクを発行します。</p>
+                <p>受け取った人はログインしなくても、この動画を見ることができます。</p>
+              </div>
+              <?php endif ?>
+              <?php endif ?>
+            </div>
           </div>
-          <div class="flex items-center gap-5">
-            <h3 class="mb-0 font-bold video-title-main">動画一覧</h3>
-            <div class="text-xs md:text-sm lg:text-base video-meta-info"><?= count($videos) ?>件の動画</div>
+
+          <?php if (isAdmin() && isPasswordProtectionEnabled()): ?>
+          <div id="manual-copy-area" class="watch-copy hidden">
+            <span class="watch-copy__label">共有リンク</span>
+            <span id="manual-copy-url" class="watch-copy__url"></span>
+            <button id="manual-copy-copy" type="button" class="icon-btn" aria-label="コピー" title="コピー">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/></svg>
+            </button>
+          </div>
+          <?php endif ?>
+
+          <!-- 説明（再生数・投稿日つき。長いときは「もっと見る」で開く） -->
+          <div class="watch-desc" id="watch-desc">
+            <div class="watch-desc__meta">
+              <span><span id="view-count"><?= number_format($viewCount) ?></span>回視聴</span>
+              <?php if ($currentUploadDateTime): ?>
+              <span title="<?= htmlspecialchars(date('Y年n月j日', strtotime($currentUploadDateTime))) ?>"><?= htmlspecialchars(formatRelativeTime($currentUploadDateTime)) ?></span>
+              <?php endif ?>
+            </div>
+            <?php if (trim((string)$currentComment) !== ''): ?>
+            <div class="watch-desc__text" id="watch-desc-text"><?= htmlspecialchars(trim($currentComment)) ?></div>
+            <button type="button" class="watch-desc__toggle hidden" id="watch-desc-toggle">もっと見る</button>
+            <?php endif ?>
           </div>
         </div>
-        <div class="flex w-full md:w-auto space-x-4 md:space-x-6 sort-actions">
-          <button id="sort-new-btn" class="flex items-center text-sm md:text-base font-medium transition-all duration-300 hover:opacity-75 <?= $sort === 'new' ? 'active' : '' ?>" onclick="changeSort('new')">
-            <svg class="w-4 h-4 md:w-4 md:h-4 lg:w-5 lg:h-5 mr-2 md:mr-2 lg:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-            </svg>
-            <span class="hidden sm:inline">新しい順</span>
-            <span class="sm:hidden">新着</span>
-          </button>
-          <button id="sort-popular-btn" class="flex items-center text-sm md:text-base font-medium transition-all duration-300 hover:opacity-75 <?= $sort === 'popular' ? 'active' : '' ?>" onclick="changeSort('popular')">
-            <svg class="w-4 h-4 md:w-4 md:h-4 lg:w-5 lg:h-5 mr-2 md:mr-2 lg:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-            </svg>
-            <span class="hidden sm:inline">人気順</span>
-            <span class="sm:hidden">人気</span>
-          </button>
-          <button id="sort-views-btn" class="flex items-center text-sm md:text-base font-medium transition-all duration-300 hover:opacity-75 <?= $sort === 'views' ? 'active' : '' ?>" onclick="changeSort('views')">
-            <svg class="w-4 h-4 md:w-4 md:h-4 lg:w-5 lg:h-5 mr-2 md:mr-2 lg:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-            </svg>
-            <span class="hidden sm:inline">再生数順</span>
-            <span class="sm:hidden">再生</span>
-          </button>
-          <button id="sort-likes-btn" class="flex items-center text-sm md:text-base font-medium transition-all duration-300 hover:opacity-75 <?= $sort === 'likes' ? 'active' : '' ?>" onclick="changeSort('likes')">
-            <svg class="w-4 h-4 md:w-4 md:h-4 lg:w-5 lg:h-5 mr-2 md:mr-2 lg:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-            </svg>
-            <span class="hidden sm:inline">いいね数順</span>
-            <span class="sm:hidden">いいね</span>
-          </button>
-        </div>
       </div>
-    </div>
-    <div id="video-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-8 5xl:grid-cols-10 gap-4 md:gap-6 video-list-container scroll-optimized"></div>
-    <div id="video-list-loading" class="text-center py-4 lg:py-8 video-meta-info text-sm lg:text-base">読み込み中...</div>
-  </div>
+
+      <?php if (!$isSharedAccess): ?>
+      <!-- 次の動画（関連動画） -->
+      <aside class="watch__secondary">
+        <?php if (!empty($randomVideos)): ?>
+        <div class="upnext-head">
+          <h2 class="upnext-head__title">次の動画</h2>
+          <label class="autoplay-switch" title="見終わったら次の動画を自動で再生します">
+            <span>自動再生</span>
+            <input type="checkbox" id="autoplay-next-toggle">
+            <span class="autoplay-switch__track" aria-hidden="true"></span>
+          </label>
+        </div>
+        <div class="related-list">
+          <?php foreach ($randomVideos as $video):
+            $basename = pathinfo($video, PATHINFO_FILENAME);
+            $thumbPath = "thumbnails/{$basename}.jpg";
+            $thumbUrl = file_exists($thumbPath) ? ($thumbPath . '?v=' . filemtime($thumbPath)) : 'images/default-thumbnail-small.svg';
+            $metadata = getVideoMetadata($basename);
+            $title = $metadata['title'] ?? 'タイトルなし';
+            $uploadDateTime = !empty($metadata['upload_date']) ? $metadata['upload_date'] : (file_exists("videos/$video") ? date('Y-m-d H:i:s', filemtime("videos/$video")) : null);
+            $videoDuration = $metadata['duration'] ?? null;
+          ?>
+          <a href="?v=<?= urlencode($video) ?>" class="related-item" data-video="<?= htmlspecialchars($video) ?>">
+            <div class="related-item__thumb thumb">
+              <img src="<?= htmlspecialchars($thumbUrl) ?>" alt="" loading="lazy">
+              <?php if (!empty($videoDuration)): ?>
+              <span class="duration-badge"><?= formatDuration($videoDuration) ?></span>
+              <?php endif ?>
+            </div>
+            <div class="related-item__body">
+              <h3 class="related-item__title" title="<?= htmlspecialchars($title) ?>"><?= htmlspecialchars($title) ?: 'タイトルなし' ?></h3>
+              <div class="related-item__meta">
+                <span><?= number_format((int)($metadata['views'] ?? 0)) ?>回視聴</span>
+                <?php if ($uploadDateTime): ?><span><?= htmlspecialchars(formatRelativeTime($uploadDateTime)) ?></span><?php endif ?>
+              </div>
+            </div>
+          </a>
+          <?php endforeach ?>
+        </div>
+        <?php endif ?>
+      </aside>
+      <?php endif ?>
+    </main>
+
+  <?php elseif ($isSharedAccess): ?>
+    <main class="home"><p class="list-status">共有リンクでは動画一覧は表示できません。</p></main>
+
+  <?php else: ?>
+    <main class="home">
+      <div class="chips-bar" role="toolbar" aria-label="並べ替え">
+        <?php foreach (['new' => '新しい順', 'popular' => '人気順', 'views' => '再生数順', 'likes' => 'いいね数順'] as $sortKey => $sortLabel): ?>
+        <button type="button" class="chip <?= $sort === $sortKey ? 'active' : '' ?>" data-sort="<?= $sortKey ?>" onclick="changeSort('<?= $sortKey ?>')" aria-pressed="<?= $sort === $sortKey ? 'true' : 'false' ?>"><?= $sortLabel ?></button>
+        <?php endforeach ?>
+      </div>
+
+      <?php if ($searchQuery !== ''): ?>
+      <div class="search-summary">
+        <span>「<?= htmlspecialchars($searchQuery) ?>」の検索結果 <?= number_format($resultCount) ?>件</span>
+        <a href="index.php">検索をやめる</a>
+      </div>
+      <?php endif ?>
+
+      <?php if (empty($videos)): ?>
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+          <p>まだ動画がありません</p>
+        </div>
+      <?php elseif ($resultCount === 0): ?>
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="M20 20l-3.5-3.5"/></svg>
+          <p>「<?= htmlspecialchars($searchQuery) ?>」に一致する動画はありません</p>
+        </div>
+      <?php else: ?>
+        <div id="video-list" class="video-grid" data-query="<?= htmlspecialchars($searchQuery) ?>"></div>
+        <div id="video-list-loading" class="list-status">読み込み中...</div>
+      <?php endif ?>
+    </main>
   <?php endif ?>
   <?php include 'footer.php'; ?>
   </body>
 </html>
-
