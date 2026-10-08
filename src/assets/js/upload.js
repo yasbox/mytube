@@ -299,7 +299,12 @@
         simultaneousUploads: 3,
         testChunks: true,
         throttleProgressCallbacks: 1,
-        method: 'multipart'
+        method: 'multipart',
+        // 通信の一時的な失敗は2秒おきに5回まで送り直す（既定は間を空けずに100回で、止まったように見えていた）
+        maxChunkRetries: 5,
+        chunkRetryInterval: 2000,
+        // ログイン切れ（401・403）やサイズ超過（413）は送り直しても通らないので、すぐにエラーにする
+        permanentErrors: [400, 401, 403, 404, 409, 413, 415, 500, 501]
       });
 
       var csrfMeta = document.querySelector('meta[name="csrf-token"]');
@@ -332,7 +337,11 @@
         var text = 'アップロードに失敗しました';
         try {
           var result = JSON.parse(message);
-          if (result && result.message) text = 'アップロードに失敗しました: ' + result.message;
+          if (result && /CSRF|認証が必要/.test(result.message || '')) {
+            text = 'ログインの有効期限が切れた可能性があります。ページを再読み込みしてから、もう一度アップロードしてください';
+          } else if (result && result.message) {
+            text = 'アップロードに失敗しました: ' + result.message;
+          }
         } catch(e) { /* JSON 以外の応答は既定の文言 */ }
         showErrorMessage(text);
       });
