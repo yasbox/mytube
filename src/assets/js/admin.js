@@ -351,7 +351,10 @@ function showEditModal(video) {
                             <span class="edit-thumb__label">クリックして変更</span>
                         </div>
                         <input type="file" id="thumbnail-file-${safeVideoId}" accept="image/jpeg,image/png,image/webp" class="hidden">
-                        <span class="field__help">JPEG / PNG / WebP（最大5MB）</span>
+                        <div class="edit-thumb-foot">
+                            <span class="field__help">画像をクリックで差し替え（JPEG / PNG / WebP・最大5MB）</span>
+                            <button type="button" class="btn btn--ghost" data-action="regen-thumbnail">動画から作り直す</button>
+                        </div>
                     </div>
                 </div>
                 <div class="modal__foot">
@@ -366,6 +369,7 @@ function showEditModal(video) {
     modal.querySelectorAll('[data-action="close"]').forEach(el => el.addEventListener('click', closeEditModal));
     modal.querySelector('[data-action="pick-thumbnail"]').addEventListener('click', () => thumbnailInput.click());
     thumbnailInput.addEventListener('change', () => uploadThumbnail(video.filename, video.basename));
+    modal.querySelector('[data-action="regen-thumbnail"]').addEventListener('click', () => regenerateThumbnail(video.filename));
     document.getElementById('modal-update-btn').addEventListener('click', () => updateMetadataFromModal(video.filename));
     modal.addEventListener('click', e => { if (e.target === modal) closeEditModal(); });
     document.addEventListener('keydown', handleModalKeydown);
@@ -435,15 +439,36 @@ async function uploadThumbnail(videoFile, basename) {
             return;
         }
         showNotification('サムネイルを更新しました', 'success');
-        document.querySelectorAll('#edit-modal .edit-thumb img').forEach(img => img.setAttribute('src', data.thumbnail_url));
-        const row = document.getElementById(`view-${safeId}`);
-        if (row) {
-            row.querySelectorAll('.vrow__thumb img').forEach(img => img.setAttribute('src', data.thumbnail_url));
-            row.setAttribute('data-thumb-url', data.thumbnail_url);
-            row.setAttribute('data-has-thumbnail', 'true');
-        }
+        applyThumbnailUrl(videoFile, data.thumbnail_url);
     } catch (e) {
         showNotification('サムネイルのアップロードに失敗しました', 'error');
+    }
+}
+
+// サムネイルを動画から自動で作り直す（差し替えた画像を元に戻すときなど）
+async function regenerateThumbnail(videoFile) {
+    if (!confirm('今のサムネイルを、動画から自動で作ったものに置き換えます。よろしいですか？')) return;
+    const button = document.querySelector('#edit-modal [data-action="regen-thumbnail"]');
+    if (button) { button.disabled = true; button.textContent = '作り直し中...'; }
+    try {
+        const data = await postAdmin({ action: 'regenerate_thumbnail', video: videoFile });
+        showNotification(data.message || (data.success ? 'サムネイルを作り直しました' : 'サムネイルを作り直せませんでした'), data.success ? 'success' : 'error');
+        if (data.success) applyThumbnailUrl(videoFile, data.thumbnail_url);
+    } catch (e) {
+        showNotification('サムネイルを作り直せませんでした', 'error');
+    } finally {
+        if (button && document.body.contains(button)) { button.disabled = false; button.textContent = '動画から作り直す'; }
+    }
+}
+
+// 新しいサムネイルを、編集ダイアログと一覧の行に反映する
+function applyThumbnailUrl(videoFile, url) {
+    document.querySelectorAll('#edit-modal .edit-thumb img').forEach(img => img.setAttribute('src', url));
+    const row = document.getElementById(`view-${videoFile.replace(/[^a-zA-Z0-9]/g, '_')}`);
+    if (row) {
+        row.querySelectorAll('.vrow__thumb img').forEach(img => img.setAttribute('src', url));
+        row.setAttribute('data-thumb-url', url);
+        row.setAttribute('data-has-thumbnail', 'true');
     }
 }
 

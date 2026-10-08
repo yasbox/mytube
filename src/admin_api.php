@@ -246,6 +246,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     exit;
 }
 
+// サムネイルを動画から作り直す（自分で差し替えたサムネイルを元に戻すときなど）
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'regenerate_thumbnail') {
+    requireCsrfToken();
+    header('Content-Type: application/json');
+    $videoFile = (string)($_POST['video'] ?? '');
+    if ($videoFile === '' || !in_array($videoFile, getVideoFiles(), true)) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => '動画ファイルが見つかりません']);
+        exit;
+    }
+    $basename = pathinfo($videoFile, PATHINFO_FILENAME);
+    // 失敗しても今のサムネイルが消えないよう、別の場所に作ってから置き換える
+    $tempDir = __DIR__ . '/temp_uploads';
+    if (!is_dir($tempDir)) {
+        @mkdir($tempDir, 0755, true);
+    }
+    $tempPath = $tempDir . '/' . uniqid('regen_', true) . '.jpg';
+    if (!generateThumbnail(__DIR__ . '/videos/' . $videoFile, $tempPath) || !@rename($tempPath, __DIR__ . '/thumbnails/' . $basename . '.jpg')) {
+        @unlink($tempPath);
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'サムネイルを作り直せませんでした']);
+        exit;
+    }
+    echo json_encode([
+        'success' => true,
+        'message' => 'サムネイルを動画から作り直しました',
+        'thumbnail_url' => 'thumbnails/' . $basename . '.jpg?v=' . time()
+    ]);
+    exit;
+}
+
 // サイトロゴアップロード（正方形化→ロゴ/ファビコン群生成）
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'upload_brand_logo') {
     requireCsrfToken();

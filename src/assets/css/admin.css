@@ -234,6 +234,14 @@ body {
   font-size: 12px;
 }
 
+.edit-thumb-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 /* 変換の進み具合 */
 .conv-video { display: flex; align-items: center; gap: 12px; }
 .conv-video img { width: 96px; aspect-ratio: 16 / 9; object-fit: contain; border-radius: 6px; background: #000; }
