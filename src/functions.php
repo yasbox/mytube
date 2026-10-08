@@ -29,6 +29,19 @@ function getSortedVideos($sort = 'new', $query = '') {
 }
 
 /**
+ * 並べ替え済みの動画リストを、指定の動画の次から始まり最後まで行ったら先頭に戻る順にする（指定の動画は除く）
+ * 動画ページの「次の動画」に使う。指定の動画がリストにないとき（非公開の動画など）はそのまま
+ */
+function videosAfter(array $videos, string $currentVideo): array {
+    $files = array_map(fn($v) => (string)($v['filename'] ?? ''), $videos);
+    $position = array_search($currentVideo, $files, true);
+    if ($position === false) {
+        return $videos;
+    }
+    return array_merge(array_slice($videos, $position + 1), array_slice($videos, 0, $position));
+}
+
+/**
  * 検索語を整える（前後の空白を除き、長すぎるものは切る）。不正な値は空文字
  */
 function normalizeSearchQuery($query): string {

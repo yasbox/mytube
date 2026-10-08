@@ -95,6 +95,63 @@ function renderVideoCard(video) {
     </div>`;
 }
 
+// ===== 動画ページの「次の動画」: 下までスクロールしたら続きを読み込む（今の動画の次から、最後まで） =====
+const RELATED_LIMIT = 12;
+const relatedState = { offset: 0, loading: false, allLoaded: false };
+
+function renderRelatedItem(video) {
+  const title = escapeHtml(video.title || 'タイトルなし');
+  const uploaded = video.upload_date || '';
+  const duration = video.duration && video.duration !== '0:00' ? `<span class="duration-badge">${escapeHtml(video.duration)}</span>` : '';
+  return `
+    <a href="?v=${encodeURIComponent(video.video)}" class="related-item" data-video="${escapeHtml(video.video)}">
+      <div class="related-item__thumb thumb">
+        <img class="thumb-bg" src="${escapeHtml(video.thumb)}" alt="" loading="lazy">
+        <img class="thumb-img" src="${escapeHtml(video.thumb)}" alt="" loading="lazy">
+        ${duration}
+        ${progressBarHtml(video.video)}
+      </div>
+      <div class="related-item__body">
+        <h3 class="related-item__title" title="${title}">${title}</h3>
+        <div class="related-item__meta">
+          <span>${Number(video.views || 0).toLocaleString()}回視聴</span>
+          ${uploaded ? `<span>${escapeHtml(formatRelativeTime(uploaded))}</span>` : ''}
+        </div>
+      </div>
+    </a>`;
+}
+
+function initRelatedList() {
+  const list = document.getElementById('related-list');
+  if (!list || !currentVideo) return;
+  relatedState.offset = list.querySelectorAll('.related-item').length;
+  relatedState.allLoaded = relatedState.offset < RELATED_LIMIT;
+  if (relatedState.allLoaded) return;
+  window.addEventListener('scroll', PerformanceUtils.debounce(checkRelatedScroll, 100), { passive: true });
+  checkRelatedScroll();
+}
+
+function checkRelatedScroll() {
+  if (document.documentElement.scrollHeight - (window.scrollY + window.innerHeight) < 600) loadMoreRelated();
+}
+
+function loadMoreRelated() {
+  const list = document.getElementById('related-list');
+  if (!list || relatedState.loading || relatedState.allLoaded) return;
+  relatedState.loading = true;
+  const params = new URLSearchParams({ action: 'list_videos', after: currentVideo, offset: relatedState.offset, limit: RELATED_LIMIT, sort: list.dataset.sort || 'new' });
+  fetch(`./index.php?${params}`)
+    .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
+    .then(videos => {
+      if (videos.length < RELATED_LIMIT) relatedState.allLoaded = true;
+      relatedState.offset += videos.length;
+      list.insertAdjacentHTML('beforeend', videos.map(renderRelatedItem).join(''));
+      relatedState.loading = false;
+      if (!relatedState.allLoaded) requestAnimationFrame(checkRelatedScroll);
+    })
+    .catch(() => { relatedState.loading = false; relatedState.allLoaded = true; });
+}
+
 function setListStatus(text) {
   const el = document.getElementById('video-list-loading');
   if (el) el.textContent = text;
@@ -335,6 +392,7 @@ function toggleLike(videoFile) {
     likeButton.classList.remove('like-pop');
     void likeButton.offsetWidth; // アニメーションをやり直すため
     likeButton.classList.add('like-pop');
+    showFloatingHearts(document.getElementById('like-icon') || likeButton);
   }
   const formData = new FormData();
   formData.append('action', 'toggle_like');
@@ -347,7 +405,12 @@ function toggleLike(videoFile) {
     .then(data => {
       if (data.success) {
         if (uniqueLike) sessionStorage.setItem(likeCountKey, 'true');
-        if (likeCountElement) likeCountElement.textContent = data.likes.toLocaleString();
+        if (likeCountElement) {
+          likeCountElement.textContent = data.likes.toLocaleString();
+          likeCountElement.classList.remove('like-count-bump');
+          void likeCountElement.offsetWidth;
+          likeCountElement.classList.add('like-count-bump');
+        }
         likeButton?.classList.add('liked');
       } else {
         showNotification(data.message || 'いいねの更新に失敗しました', 'error');
@@ -355,6 +418,29 @@ function toggleLike(videoFile) {
     })
     .catch(() => showNotification('いいねの更新に失敗しました', 'error'))
     .finally(() => { if (likeButton) setTimeout(() => { likeButton.disabled = false; }, 300); });
+}
+
+// いいねを押したときに、ハートがいくつか上へ舞い上がる演出
+function showFloatingHearts(origin) {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  const rect = origin.getBoundingClientRect();
+  const heart = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>';
+  for (let i = 0; i < 6; i++) {
+    const el = document.createElement('div');
+    el.className = 'floating-heart';
+    el.innerHTML = heart;
+    el.style.left = `${rect.left + rect.width / 2}px`;
+    el.style.top = `${rect.top + rect.height / 2}px`;
+    // 左右へのずれ・上がる高さ・大きさ・始まる時間を少しずつ変える
+    el.style.setProperty('--dx', `${Math.round((Math.random() - 0.5) * 90)}px`);
+    el.style.setProperty('--dy', `${-70 - Math.round(Math.random() * 50)}px`);
+    el.style.setProperty('--s', (0.8 + Math.random() * 0.5).toFixed(2));
+    el.style.animationDelay = `${i * 60}ms`;
+    el.style.color = ['', '#ff4d6d', '#ff8fa3'][i % 3]; // 赤（既定）と、明るめの赤2色
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+    setTimeout(() => el.remove(), 2000);
+  }
 }
 
 // ===== 共有 =====
@@ -467,6 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initAutoNextToggle();
   initDescription();
   decorateRelatedProgress();
+  initRelatedList();
   initShareButtons();
 });
 

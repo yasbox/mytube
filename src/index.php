@@ -40,6 +40,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'list_videos') {
     }
 
     $all = getSortedVideos($sort, normalizeSearchQuery($_GET['q'] ?? ''));
+    // 動画ページの「次の動画」の続き: 今の動画の次からの順にする
+    if (isset($_GET['after']) && is_string($_GET['after'])) {
+        $all = videosAfter($all, basename($_GET['after']));
+    }
     $slice = array_slice($all, $offset, $limit);
 
     $mapped = array_map(function($v) {
@@ -124,19 +128,8 @@ if (!$isSharedAccess) {
 
 
 // 次の動画（サイドバー）: トップページの並び順で、今の動画の次から12本（最後まで行ったら先頭に戻る）
-// 自動再生もこの先頭へ進むため、プレイリストのように一覧の順番どおりに見ていける
-$nextVideos = [];
-if ($currentVideo && count($videoFiles) > 0) {
-    $position = array_search($currentVideo, $videoFiles, true);
-    $start = $position === false ? 0 : $position + 1; // 非公開の動画（一覧にない）は先頭から
-    $total = count($videoFiles);
-    for ($i = 0; $i < $total && count($nextVideos) < 12; $i++) {
-        $candidate = $videoFiles[($start + $i) % $total];
-        if ($candidate !== $currentVideo) {
-            $nextVideos[] = $candidate;
-        }
-    }
-}
+// 自動再生もこの先頭へ進むため、プレイリストのように一覧の順番どおりに見ていける。続きはスクロールで読み込む
+$nextVideos = $currentVideo ? array_slice(array_column(videosAfter($videos, $currentVideo), 'filename'), 0, 12) : [];
 
 // 現在の動画情報
 $currentBasename = $currentVideo ? pathinfo($currentVideo, PATHINFO_FILENAME) : '';
@@ -288,7 +281,7 @@ $pageCss = 'home';
             <span class="switch__track" aria-hidden="true"></span>
           </label>
         </div>
-        <div class="related-list">
+        <div class="related-list" id="related-list" data-sort="<?= htmlspecialchars($sort) ?>">
           <?php foreach ($nextVideos as $video):
             $basename = pathinfo($video, PATHINFO_FILENAME);
             $thumbPath = "thumbnails/{$basename}.jpg";

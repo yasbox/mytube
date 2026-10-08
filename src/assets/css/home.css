@@ -253,11 +253,37 @@ body {
 }
 #like-button.liked svg { fill: currentColor; }
 #like-button.liked { color: var(--ui-accent); }
-#like-button.like-pop svg { animation: like-pop 0.35s ease; }
+#like-button.like-pop svg { animation: like-pop 0.45s ease; }
 @keyframes like-pop {
   0% { transform: scale(1); }
-  40% { transform: scale(1.35); }
+  30% { transform: scale(1.5); }
+  60% { transform: scale(0.9); }
   100% { transform: scale(1); }
+}
+#like-count { display: inline-block; }
+#like-count.like-count-bump { animation: like-count-bump 0.4s ease; }
+@keyframes like-count-bump {
+  0% { transform: translateY(0); }
+  40% { transform: translateY(-4px); }
+  100% { transform: translateY(0); }
+}
+/* いいねで舞い上がるハート（JS が body に追加する） */
+.floating-heart {
+  position: fixed;
+  z-index: 1000;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  color: var(--ui-accent);
+  pointer-events: none;
+  opacity: 0;
+  animation: floating-heart 1.1s ease-out forwards;
+}
+.floating-heart svg { width: 100%; height: 100%; display: block; }
+@keyframes floating-heart {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.3); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(var(--s)); }
 }
 .watch-help { width: 36px; height: 36px; }
 .watch-help svg { width: 20px; height: 20px; color: var(--ui-text-2); }
