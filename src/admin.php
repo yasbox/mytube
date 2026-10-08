@@ -47,6 +47,15 @@ include 'head.php';
             </div>
         </section>
 
+        <!-- 共有中のリンク（使えるリンクがあるときだけ表示） -->
+        <section class="studio-section hidden" id="share-links" aria-labelledby="share-links-title">
+            <div class="studio-section__head">
+                <h2 class="studio-section__title" id="share-links-title">共有中のリンク</h2>
+            </div>
+            <p class="share-links__note">ログインしなくても見られるリンクです。期限が来ると自動で使えなくなります。</p>
+            <div class="share-links" id="share-links-list"></div>
+        </section>
+
         <!-- 動画の一覧 -->
         <section class="studio-section">
             <div class="studio-section__head">

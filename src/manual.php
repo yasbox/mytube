@@ -48,7 +48,7 @@ $maxUploadMb = (int)Config::get('features.upload.max_size_mb', 500);
         </a>
         <a href="#share" class="manual-card">
           <div class="manual-card__title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>共有リンク</div>
-          <p>パスワード保護中でも、24時間だけ見られるリンク</p>
+          <p>パスワード保護中でも24時間だけ見られるリンク。途中で無効にもできます</p>
         </a>
         <a href="#disclaimer" class="manual-card">
           <div class="manual-card__title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 8v4m0 4h.01"/></svg>ご利用にあたって</div>
@@ -105,8 +105,8 @@ $maxUploadMb = (int)Config::get('features.upload.max_size_mb', 500);
       <ul>
         <li>有効期限: 発行から24時間で使えなくなります。</li>
         <li>見られる範囲: その動画だけです（一覧や次の動画は表示されません）。</li>
-        <li>発行し直し: 期限内に発行し直すと同じリンクになります（期限は延びません）。</li>
-        <li>途中で無効にする機能はありません。渡す相手に注意してください。</li>
+        <li>発行し直し: 期限内に発行し直すと同じリンクになります（期限は延びません）。無効にしたあとに発行すると、新しいリンクになります。</li>
+        <li>確認・無効化: 「動画」タブの「共有中のリンク」に、今使えるリンクと残り時間が出ます。「無効にする」を押すと、期限前でもすぐに使えなくなります（使えるリンクがないときは表示されません）。</li>
         <li>リンクは自動でコピーされ、対応している端末では共有画面が開きます。</li>
       </ul>
 
@@ -116,7 +116,7 @@ $maxUploadMb = (int)Config::get('features.upload.max_size_mb', 500);
         <li>常に動いていることや、すべての機能が完璧に動くことはお約束できません。</li>
         <li>基本的な安全対策はしていますが、高度な防御や厳格な運用は対象外です。</li>
         <li>個人情報や重要な情報など、機密性の高い内容のアップロードはお控えください。</li>
-        <li>共有リンクは24時間で使えなくなりますが、URL が他の人に伝わると見られてしまう可能性があります。</li>
+        <li>共有リンクは24時間で使えなくなりますが、URL が他の人に伝わると見られてしまう可能性があります。心配なときは「共有中のリンク」から無効にしてください。</li>
         <li>まれに動画や情報が消えたり壊れたりする可能性があります。大切な動画は手元にも保存してください。</li>
         <li>利用により生じた損害やトラブルについて、開発・運用側では責任を負えません。</li>
       </ul>

@@ -213,6 +213,40 @@ body {
   .vrow__actions .visibility-btn { display: none; }
 }
 
+/* 共有中のリンク */
+.share-links__note { margin: -8px 0 12px; color: var(--ui-text-2); font-size: 13px; }
+.share-links { border-top: 1px solid var(--ui-border); }
+.share-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--ui-border);
+}
+.share-link__thumb {
+  width: 96px;
+  aspect-ratio: 16 / 9;
+  flex-shrink: 0;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #000;
+}
+.share-link__text { flex: 1; min-width: 0; }
+.share-link__title {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.share-link__meta { margin-top: 2px; color: var(--ui-text-2); font-size: 13px; }
+.share-link__actions { display: flex; gap: 8px; flex-shrink: 0; }
+@media (max-width: 599px) {
+  .share-link { flex-wrap: wrap; }
+  .share-link__thumb { width: 80px; }
+  .share-link__actions { width: 100%; justify-content: flex-end; }
+}
+
 /* 編集ダイアログのサムネイル */
 .edit-thumb {
   position: relative;

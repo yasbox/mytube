@@ -246,6 +246,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     exit;
 }
 
+// 今使える共有リンクの一覧（「動画の管理」の「共有中のリンク」）
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'list_share_links') {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => true, 'links' => getActiveShareLinks()], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// 共有リンクを期限前に無効にする
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'revoke_share_link') {
+    requireCsrfToken();
+    header('Content-Type: application/json');
+    $videoFile = (string)($_POST['video'] ?? '');
+    if ($videoFile === '' || !in_array($videoFile, getVideoFiles(), true)) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => '動画ファイルが見つかりません']);
+        exit;
+    }
+    if (!revokeShareLink($videoFile)) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => '共有リンクを無効にできませんでした']);
+        exit;
+    }
+    echo json_encode(['success' => true, 'message' => '共有リンクを無効にしました']);
+    exit;
+}
+
 // サムネイルを動画から作り直す（自分で差し替えたサムネイルを元に戻すときなど）
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'regenerate_thumbnail') {
     requireCsrfToken();

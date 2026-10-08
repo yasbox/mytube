@@ -472,10 +472,82 @@ function applyThumbnailUrl(videoFile, url) {
     }
 }
 
+// ===== 共有中のリンク =====
+// 残り時間（「3時間12分」「45分」）
+function formatRemaining(seconds) {
+    const minutes = Math.max(1, Math.ceil(seconds / 60));
+    const h = Math.floor(minutes / 60), m = minutes % 60;
+    return h > 0 ? `${h}時間${m > 0 ? m + '分' : ''}` : `${m}分`;
+}
+
+async function loadShareLinks() {
+    const section = document.getElementById('share-links');
+    const list = document.getElementById('share-links-list');
+    if (!section || !list) return;
+    try {
+        const data = await (await fetch('admin_api.php?action=list_share_links')).json();
+        const links = data.success ? data.links : [];
+        const loadedAt = Date.now();
+        list.innerHTML = links.map(link => `
+            <div class="share-link" data-video="${escapeHtml(link.video)}" data-url="${escapeHtml(link.url)}" data-expires-at="${loadedAt + link.remaining * 1000}">
+                <img class="share-link__thumb" src="${escapeHtml(link.thumb)}" alt="" loading="lazy">
+                <div class="share-link__text">
+                    <div class="share-link__title">${escapeHtml(link.title || 'タイトルなし')}</div>
+                    <div class="share-link__meta" title="${escapeHtml(link.expires)} まで">残り <span class="share-link__remaining">${formatRemaining(link.remaining)}</span></div>
+                </div>
+                <div class="share-link__actions">
+                    <button type="button" class="btn" data-action="copy-share">コピー</button>
+                    <button type="button" class="btn btn--ghost" data-action="revoke-share">無効にする</button>
+                </div>
+            </div>`).join('');
+        section.classList.toggle('hidden', links.length === 0);
+    } catch (e) {
+        section.classList.add('hidden');
+    }
+}
+
+// 残り時間を1分ごとに更新し、期限が来たものは消す
+function tickShareLinks() {
+    document.querySelectorAll('.share-link').forEach(row => {
+        const remaining = (Number(row.dataset.expiresAt) - Date.now()) / 1000;
+        if (remaining <= 0) row.remove();
+        else row.querySelector('.share-link__remaining').textContent = formatRemaining(remaining);
+    });
+    if (!document.querySelector('.share-link')) document.getElementById('share-links')?.classList.add('hidden');
+}
+
+async function revokeShareLink(row) {
+    const title = row.querySelector('.share-link__title').textContent;
+    if (!confirm(`「${title}」の共有リンクを無効にしますか？
+渡したリンクはすぐに使えなくなります。`)) return;
+    try {
+        const data = await postAdmin({ action: 'revoke_share_link', video: row.dataset.video });
+        showNotification(data.message || (data.success ? '共有リンクを無効にしました' : '共有リンクを無効にできませんでした'), data.success ? 'success' : 'error');
+        if (data.success) { row.remove(); tickShareLinks(); }
+    } catch (e) {
+        showNotification('共有リンクを無効にできませんでした', 'error');
+    }
+}
+
+function initShareLinks() {
+    const list = document.getElementById('share-links-list');
+    if (!list) return;
+    list.addEventListener('click', e => {
+        const button = e.target.closest('button[data-action]');
+        const row = button?.closest('.share-link');
+        if (!row) return;
+        if (button.dataset.action === 'copy-share') copyToClipboard(row.dataset.url);
+        else if (button.dataset.action === 'revoke-share') revokeShareLink(row);
+    });
+    loadShareLinks();
+    setInterval(tickShareLinks, 60 * 1000);
+}
+
 // ===== 初期化 =====
 function initializeAdmin() {
     if (!document.getElementById('video-table-body')) return;
     loadStats();
+    initShareLinks();
     loadVideoPage(true);
     initInfiniteScroll();
 }

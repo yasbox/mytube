@@ -445,36 +445,81 @@ function hasSharedMediaAccess($videoBasename) {
 }
 
 /**
- * 共有リンクを生成する
- * @param string $videoBasename 動画のベース名（拡張子なし）
- * @return string 共有リンク
+ * 共有リンクの URL を組み立てる（index.php への直接リンク）
+ * パスワードを付けると、ログインしなくても見られるリンクになる
+ * @param string $videoFile 動画のファイル名（拡張子つき。以前は .mp4 に決め打ちで、MOV などでは開けなかった）
  */
-function generateShareLink($videoBasename) {
-    $passwordInfo = getOrGenerateVideoPassword($videoBasename);
-    
-    if (!$passwordInfo) {
-        return false;
-    }
-    
-    // 現在のリクエストのURIではなく、index.phpへの直接的なリンクを生成
-    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? "https" : "http";
-    $host = $_SERVER['HTTP_HOST'];
-    
-    // index.phpへの直接的なリンクを生成
-    return $protocol . "://" . $host . "/index.php?v=" . urlencode($videoBasename . '.mp4') . "&share=" . $passwordInfo['password'];
+function buildShareUrl(string $videoFile, string $password = ''): string {
+    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+    $url = $protocol . '://' . $_SERVER['HTTP_HOST'] . '/index.php?v=' . urlencode($videoFile);
+    return $password !== '' ? $url . '&share=' . urlencode($password) : $url;
 }
 
 /**
- * 通常の共有リンクを生成する（ワンタイムパスワードなし）
- * @param string $videoBasename 動画のベース名（拡張子なし）
- * @return string 共有リンク
+ * 共有リンク（ログインなしで24時間見られる）を生成する。期限内なら同じリンクを返す
+ * @param string $videoFile 動画のファイル名（拡張子つき）
+ * @return string|false 共有リンク
  */
-function generateNormalShareLink($videoBasename) {
-    // 現在のリクエストのURIではなく、index.phpへの直接的なリンクを生成
-    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? "https" : "http";
-    $host = $_SERVER['HTTP_HOST'];
-    
-    // index.phpへの直接的なリンクを生成（ワンタイムパスワードなし）
-    // shareパラメータは含めない（通常の動画視聴と同じ）
-    return $protocol . "://" . $host . "/index.php?v=" . urlencode($videoBasename . '.mp4');
+function generateShareLink($videoFile) {
+    $passwordInfo = getOrGenerateVideoPassword(pathinfo($videoFile, PATHINFO_FILENAME));
+    if (!$passwordInfo) {
+        return false;
+    }
+    return buildShareUrl($videoFile, (string)$passwordInfo['password']);
+}
+
+/**
+ * 通常の動画リンク（ワンタイムパスワードなし。見るにはログインが必要）を生成する
+ * @param string $videoFile 動画のファイル名（拡張子つき）
+ */
+function generateNormalShareLink($videoFile) {
+    return buildShareUrl($videoFile);
+}
+
+/**
+ * 今使える共有リンクの一覧（管理画面の「共有中のリンク」用）。期限の近い順
+ * @return array [['video', 'title', 'expires', 'remaining'(秒), 'url', 'thumb'], ...]
+ */
+function getActiveShareLinks(): array {
+    $now = time();
+    $links = [];
+    foreach (getVideoFiles() as $videoFile) {
+        $basename = pathinfo($videoFile, PATHINFO_FILENAME);
+        $metadata = getVideoMetadata($basename);
+        if (empty($metadata['share_password']) || empty($metadata['share_password_expires'])) {
+            continue;
+        }
+        $expires = strtotime((string)$metadata['share_password_expires']);
+        if ($expires === false || $expires <= $now) {
+            continue;
+        }
+        $thumbPath = "thumbnails/{$basename}.jpg";
+        $links[] = [
+            'video' => $videoFile,
+            'title' => (string)($metadata['title'] ?? ''),
+            'expires' => (string)$metadata['share_password_expires'],
+            'remaining' => $expires - $now,
+            'url' => buildShareUrl($videoFile, (string)$metadata['share_password']),
+            'thumb' => is_file(__DIR__ . '/' . $thumbPath) ? $thumbPath . '?v=' . filemtime(__DIR__ . '/' . $thumbPath) : 'images/default-thumbnail-small.svg',
+        ];
+    }
+    usort($links, fn($a, $b) => $a['remaining'] <=> $b['remaining']);
+    return $links;
+}
+
+/**
+ * 共有リンクを期限前に無効にする
+ * すでに開いている人が動画の続きを読み込めないよう、発行済みの動画の専用 URL も消す
+ * @param string $videoFile 動画のファイル名（拡張子つき）
+ */
+function revokeShareLink(string $videoFile): bool {
+    $saved = saveVideoMetadata(pathinfo($videoFile, PATHINFO_FILENAME), [
+        'share_password' => null,
+        'share_password_expires' => null,
+        'share_password_created' => null,
+    ]);
+    if ($saved) {
+        removeMediaUrlsFor($videoFile);
+    }
+    return (bool)$saved;
 }

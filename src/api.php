@@ -122,22 +122,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         exit;
     }
     
-    $videoFile = $_POST['video_file'] ?? '';
-    if (empty($videoFile)) {
+    $videoFile = basename((string)($_POST['video_file'] ?? ''));
+    if ($videoFile === '') {
         echo json_encode(['success' => false, 'message' => '動画ファイルが指定されていません']);
         exit;
     }
-    
-    $videoBasename = pathinfo($videoFile, PATHINFO_FILENAME);
+    if (!in_array($videoFile, getVideoFiles(), true)) {
+        echo json_encode(['success' => false, 'message' => '動画が見つかりません']);
+        exit;
+    }
     
     // 管理者の場合はワンタイムパスワード付きの共有リンクを生成
     if (isAdmin()) {
-        $shareLink = generateShareLink($videoBasename);
+        $shareLink = generateShareLink($videoFile);
         $message = 'ワンタイムパスワード付きの共有リンクが生成されました';
         $isSecure = true;
     } else {
         // 一般ユーザーの場合は通常の動画視聴リンクを生成（認証が必要）
-        $shareLink = generateNormalShareLink($videoBasename);
+        $shareLink = generateNormalShareLink($videoFile);
         $message = '動画リンクが生成されました（認証が必要）';
         $isSecure = false;
     }
