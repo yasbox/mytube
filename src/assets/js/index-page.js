@@ -87,6 +87,7 @@ function renderVideoCard(video) {
         <a href="${href}" class="video-card__title" title="${title}">${title}</a>
         <div class="video-card__meta">
           <span>${Number(video.views || 0).toLocaleString()}回視聴</span>
+          <span class="video-card__likes" title="いいね"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>${Number(video.likes || 0).toLocaleString()}<span class="sr-only">いいね</span></span>
           ${uploaded ? `<span title="${escapeHtml(uploaded.split(' ')[0])}">${escapeHtml(formatRelativeTime(uploaded))}</span>` : ''}
         </div>
       </div>

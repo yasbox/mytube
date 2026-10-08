@@ -126,6 +126,8 @@ body {
   font-size: 14px;
   line-height: 20px;
 }
+.video-card__likes { display: inline-flex; align-items: center; }
+.video-card__likes svg { width: 14px; height: 14px; margin-right: 3px; flex-shrink: 0; }
 .video-card__meta > span + span::before,
 .related-item__meta > span + span::before,
 .watch-desc__meta > span + span::before {
