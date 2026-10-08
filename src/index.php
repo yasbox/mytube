@@ -81,13 +81,14 @@ $videoFiles = array_values(array_filter(array_map(function($v){
 
 // 再生対象（?v=...）
 $currentVideo = isset($_GET['v']) ? basename((string)$_GET['v']) : null;
+$requestedVideoMissing = false; // ?v= で指定された動画が無い・見られない（トップページに案内を出す）
 
 // 動画ファイルの存在確認
 if ($currentVideo) {
     $videoPath = "videos/{$currentVideo}";
     if (!file_exists($videoPath)) {
-        error_log("index.php: 動画ファイルが見つかりません: {$videoPath}");
         $currentVideo = null;
+        $requestedVideoMissing = true;
     }
 }
 
@@ -96,8 +97,8 @@ $currentVideoIndex = $currentVideo ? array_search($currentVideo, $videoFiles, tr
 $isPrivatePreview = $currentVideoIndex === false && $currentVideo
     && isUserAuthenticated() && isAdmin() && in_array($currentVideo, getVideoFiles(), true);
 if ($currentVideoIndex === false && $currentVideo && !$isPrivatePreview) {
-    error_log("index.php: 動画ファイルがリストに存在しません: {$currentVideo}");
     $currentVideo = null;
+    $requestedVideoMissing = true;
     $currentVideoIndex = null;
 }
 
@@ -121,34 +122,6 @@ if (!$isSharedAccess) {
     requireViewerAccess();
 }
 
-// 現在の動画が非公開の場合のアクセス制御（保護とは別軸）
-if ($currentVideo && !$isPrivatePreview && isPasswordProtectionEnabled()) {
-    $currentBasename = pathinfo($currentVideo, PATHINFO_FILENAME);
-    $currentMetadata = getVideoMetadata($currentBasename);
-    if (($currentMetadata['is_public'] ?? true) === false) {
-        // 非公開動画へのアクセスを拒否
-        http_response_code(404);
-        $pageTitle = '動画が見つかりません - ' . Config::get('app.name', 'MyTube');
-        $pageCss = 'index';
-        include 'head.php';
-        include 'header.php';
-        ?>
-        <div class="flex flex-col items-center justify-center min-h-screen px-4">
-            <div class="text-center">
-                <h1 class="font-bold mb-4">動画が見つかりません</h1>
-                <p class="text-lg mb-8">この動画は非公開に設定されているか、存在しません。</p>
-                <a href="index.php" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200" style="background-color: var(--blue-600);">
-                    トップページに戻る
-                </a>
-            </div>
-        </div>
-        <?php include 'footer.php'; ?>
-        </body>
-        </html>
-        <?php
-        exit;
-    }
-}
 
 // 次の動画（サイドバー）: トップページの並び順で、今の動画の次から12本（最後まで行ったら先頭に戻る）
 // 自動再生もこの先頭へ進むため、プレイリストのように一覧の順番どおりに見ていける
@@ -309,10 +282,10 @@ $pageCss = 'home';
         <?php if (!empty($nextVideos)): ?>
         <div class="upnext-head">
           <h2 class="upnext-head__title">次の動画 <span class="upnext-head__order"><?= htmlspecialchars($sortLabels[$sort]) ?></span></h2>
-          <label class="autoplay-switch" title="見終わったら次の動画を自動で再生します">
+          <label class="switch upnext-switch" title="見終わったら次の動画を自動で再生します">
             <span>自動再生</span>
             <input type="checkbox" id="autoplay-next-toggle">
-            <span class="autoplay-switch__track" aria-hidden="true"></span>
+            <span class="switch__track" aria-hidden="true"></span>
           </label>
         </div>
         <div class="related-list">
@@ -352,6 +325,9 @@ $pageCss = 'home';
 
   <?php else: ?>
     <main class="home">
+      <?php if ($requestedVideoMissing): ?>
+      <p class="home-notice">お探しの動画は見つかりませんでした。削除されたか、非公開になっている可能性があります。</p>
+      <?php endif ?>
       <div class="chips-bar" role="toolbar" aria-label="並べ替え">
         <?php foreach (['new' => '新しい順', 'popular' => '人気順', 'views' => '再生数順', 'likes' => 'いいね数順'] as $sortKey => $sortLabel): ?>
         <button type="button" class="chip <?= $sort === $sortKey ? 'active' : '' ?>" data-sort="<?= $sortKey ?>" onclick="changeSort('<?= $sortKey ?>')" aria-pressed="<?= $sort === $sortKey ? 'true' : 'false' ?>"><?= $sortLabel ?></button>

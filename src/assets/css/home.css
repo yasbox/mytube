@@ -26,25 +26,6 @@ body {
   scrollbar-width: none;
 }
 .chips-bar::-webkit-scrollbar { display: none; }
-.chip {
-  flex-shrink: 0;
-  height: 32px;
-  padding: 0 12px;
-  border: none;
-  border-radius: 8px;
-  background: var(--ui-surface);
-  color: var(--ui-text);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.1s ease;
-}
-.chip:hover { background: var(--ui-surface-hover); }
-.chip.active {
-  background: var(--ui-chip-on-bg);
-  color: var(--ui-chip-on-text);
-}
-
 .search-summary {
   display: flex;
   align-items: baseline;
@@ -152,12 +133,6 @@ body {
   margin: 0 4px;
 }
 
-.list-status {
-  padding: 24px 0;
-  text-align: center;
-  color: var(--ui-text-2);
-  font-size: 14px;
-}
 .empty-state {
   padding: 96px 16px;
   text-align: center;
@@ -362,43 +337,10 @@ body {
   font-size: 16px;
   font-weight: 600;
 }
-.autoplay-switch {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.upnext-switch {
   color: var(--ui-text-2);
   font-size: 13px;
-  cursor: pointer;
-  user-select: none;
 }
-.autoplay-switch input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-.autoplay-switch__track {
-  position: relative;
-  width: 36px;
-  height: 20px;
-  border-radius: 10px;
-  background: var(--ui-surface-hover);
-  transition: background-color 0.15s ease;
-}
-.autoplay-switch__track::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  transition: transform 0.15s ease;
-}
-.autoplay-switch input:checked + .autoplay-switch__track { background: var(--ui-text); }
-.autoplay-switch input:checked + .autoplay-switch__track::after { transform: translateX(16px); background: var(--ui-bg); }
-.autoplay-switch input:focus-visible + .autoplay-switch__track { outline: 2px solid #1c62b9; outline-offset: 2px; }
 
 .related-list {
   display: flex;
@@ -614,4 +556,15 @@ body {
   color: var(--ui-text-2);
   font-size: 13px;
   font-weight: 400;
+}
+.home-notice {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--ui-surface);
+  color: var(--ui-text-2);
+  font-size: 14px;
+}
+@media (max-width: 639px) {
+  .home-notice { margin: 8px 12px 0; }
 }

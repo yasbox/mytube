@@ -56,17 +56,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // 失敗時は元の状態に戻す
             if (!success) {
                 e.target.checked = !originalState;
-                // トグルボタンの見た目も元に戻す
-                const toggleSlider = e.target.nextElementSibling;
-                if (toggleSlider) {
-                    if (!originalState) {
-                        toggleSlider.classList.add('peer-checked:bg-blue-600');
-                        toggleSlider.classList.remove('bg-gray-200');
-                    } else {
-                        toggleSlider.classList.remove('peer-checked:bg-blue-600');
-                        toggleSlider.classList.add('bg-gray-200');
-                    }
-                }
             }
         });
     }
@@ -79,16 +68,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const success = await updateSettingsPartial({ 'features.autoplay': enabled });
             if (!success) {
                 e.target.checked = !originalState;
-                const toggleSlider = e.target.nextElementSibling;
-                if (toggleSlider) {
-                    if (!originalState) {
-                        toggleSlider.classList.add('peer-checked:bg-blue-600');
-                        toggleSlider.classList.remove('bg-gray-200');
-                    } else {
-                        toggleSlider.classList.remove('peer-checked:bg-blue-600');
-                        toggleSlider.classList.add('bg-gray-200');
-                    }
-                }
             }
         });
     }
@@ -103,17 +82,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // 失敗時は元の状態に戻す
             if (!success) {
                 e.target.checked = !originalState;
-                // トグルボタンの見た目も元に戻す
-                const toggleSlider = e.target.nextElementSibling;
-                if (toggleSlider) {
-                    if (!originalState) {
-                        toggleSlider.classList.add('peer-checked:bg-blue-600');
-                        toggleSlider.classList.remove('bg-gray-200');
-                    } else {
-                        toggleSlider.classList.remove('peer-checked:bg-blue-600');
-                        toggleSlider.classList.add('bg-gray-200');
-                    }
-                }
             }
         });
     }
@@ -496,17 +464,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const isChecked = updatedSettings['features.likes.unique_countup'] === '1' || updatedSettings['features.likes.unique_countup'] === true;
                 likesUniqueToggle.checked = isChecked;
                 
-                // トグルボタンの見た目も更新
-                const toggleSlider = likesUniqueToggle.nextElementSibling;
-                if (toggleSlider) {
-                    if (isChecked) {
-                        toggleSlider.classList.add('peer-checked:bg-blue-600');
-                        toggleSlider.classList.remove('bg-gray-200');
-                    } else {
-                        toggleSlider.classList.remove('peer-checked:bg-blue-600');
-                        toggleSlider.classList.add('bg-gray-200');
-                    }
-                }
             }
         }
         
@@ -527,17 +484,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const isChecked = updatedSettings['features.views.unique_countup'] === '1' || updatedSettings['features.views.unique_countup'] === true;
                 viewsUniqueToggle.checked = isChecked;
                 
-                // トグルボタンの見た目も更新
-                const toggleSlider = viewsUniqueToggle.nextElementSibling;
-                if (toggleSlider) {
-                    if (isChecked) {
-                        toggleSlider.classList.add('peer-checked:bg-blue-600');
-                        toggleSlider.classList.remove('bg-gray-200');
-                    } else {
-                        toggleSlider.classList.remove('peer-checked:bg-blue-600');
-                        toggleSlider.classList.add('bg-gray-200');
-                    }
-                }
             }
         }
         

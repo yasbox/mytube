@@ -28,7 +28,6 @@ $pageCss = $pageCss ?? 'style'; // デフォルトはstyle.cssのみ
 $themeCssVersion = getAssetVersion('assets/css/theme.css');
 $headerCssVersion = getAssetVersion('assets/css/header.css');
 $cssVersion = getAssetVersion('assets/css/style.css');
-$indexCssVersion = getAssetVersion('assets/css/index.css');
 $adminCssVersion = getAssetVersion('assets/css/admin.css');
 
 // ロゴ/ファビコン: ユーザー上書きがあればそれを使い、なければデフォルト
@@ -101,10 +100,10 @@ $faviconPngVersion = is_file(__DIR__ . '/' . $userApple) ? filemtime(__DIR__ . '
   <link rel="stylesheet" href="assets/css/theme.css?v=<?= $themeCssVersion ?>">
   <!-- ヘッダー専用スタイル -->
   <link rel="stylesheet" href="assets/css/header.css?v=<?= $headerCssVersion ?>">
+  <!-- 共通の部品（ボタン・入力欄・スイッチ・ダイアログなど） -->
+  <link rel="stylesheet" href="assets/css/ui.css?v=<?= getAssetVersion('assets/css/ui.css') ?>">
   <link rel="stylesheet" href="assets/css/style.css?v=<?= $cssVersion ?>">
-  <?php if ($pageCss === 'index'): ?>
-  <link rel="stylesheet" href="assets/css/index.css?v=<?= $indexCssVersion ?>">
-  <?php elseif ($pageCss === 'home'): ?>
+  <?php if ($pageCss === 'home'): ?>
   <link rel="stylesheet" href="assets/css/home.css?v=<?= getAssetVersion('assets/css/home.css') ?>">
   <?php elseif ($pageCss === 'admin'): ?>
   <link rel="stylesheet" href="assets/css/admin.css?v=<?= $adminCssVersion ?>">

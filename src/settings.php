@@ -13,242 +13,170 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 <!DOCTYPE html>
 <html lang="ja">
 <?php
-$pageTitle = Config::get('app.name', 'MyTube') . ' - 設定';
+$pageTitle = '設定 - ' . Config::get('app.name', 'MyTube');
 $pageCss = 'admin'; // admin.cssを読み込む
 
-$adminJsVersion = getAssetVersion('assets/js/admin.js');
-$settingsJsVersion = getAssetVersion('assets/js/settings.js');
-$additionalScripts = '<script src="assets/js/admin.js?v=' . $adminJsVersion . '" defer></script>';
 include 'head.php';
 ?>
 
 <body class="min-h-screen flex flex-col">
     <?php
-    // ヘッダー設定
-    $pageTitle = '設定';
     $showUploadButton = true;
-    $showAdminButton = false; // 現在のページなので非表示
-    $showHomeButton = true; // モバイルメニューにホームリンクを表示
+    $showAdminButton = false;
+    $showHomeButton = true;
     $isAdminPage = true;
     include 'header.php';
+
+    // 初期状態をサーバ側で反映
+    $isPublicMode = true;
+    $likesUniqueCountup = false;
+    $viewsUniqueCountup = false;
+    $autoplayEnabled = true;
+    if (class_exists('Config') && method_exists('Config', 'getSettingsJsonPath')) {
+        $settingsPath = Config::getSettingsJsonPath();
+        if (is_file($settingsPath) && is_readable($settingsPath)) {
+            $raw = file_get_contents($settingsPath);
+            $dec = $raw !== false ? json_decode($raw, true) : null;
+            if (is_array($dec)) {
+                $isPublicMode = !filter_var($dec['security']['password_protection'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                $likesUniqueCountup = filter_var($dec['features']['likes']['unique_countup'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                $viewsUniqueCountup = filter_var($dec['features']['views']['unique_countup'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                $autoplayEnabled = filter_var($dec['features']['autoplay'] ?? Config::get('features.autoplay', true), FILTER_VALIDATE_BOOLEAN);
+            }
+        }
+    }
+    $siteName = Config::get('app.name', 'MyTube');
+    $siteDescription = (string)Config::get('app.description', '');
+    $defaultTheme = strtolower((string)Config::get('ui.theme', 'light')) === 'dark' ? 'dark' : 'light';
+    $brandUserLogoRel = 'data/branding/logo-square.png';
+    $brandLogoRel = is_file(__DIR__ . '/' . $brandUserLogoRel) ? $brandUserLogoRel : 'images/logo.png';
+    $brandLogoPreviewSrc = $brandLogoRel . '?v=' . getAssetVersion($brandLogoRel);
+    $envAdmin = $_ENV['ADMIN_PASSWORD'] ?? $_SERVER['ADMIN_PASSWORD'] ?? getenv('ADMIN_PASSWORD');
+    $adminPasswordManagedByEnv = is_string($envAdmin) && $envAdmin !== '';
     ?>
 
-    <!-- メインコンテンツ -->
-    <div class="admin-page-container max-w-none mx-auto p-0 md:p-4 lg:p-6 xl:p-8">
+    <main class="studio">
+        <?php $adminTab = 'settings'; $adminTitle = '設定'; include 'admin_nav.php'; ?>
 
-        <!-- 設定セクション -->
-        <div class="admin-card p-4 md:p-6 lg:p-8 mb-6 md:mb-8">
-            <h2 class="section-title font-bold mb-8 md:mb-12">設定</h2>
-            <?php
-            // 初期状態をサーバ側で反映
-            $isPublicMode = true;
-            $currentUserPassword = '';
-            $likesUniqueCountup = false;
-            $viewsUniqueCountup = false;
-            $autoplayEnabled = true;
-            if (class_exists('Config') && method_exists('Config', 'getSettingsJsonPath')) {
-                $settingsPath = Config::getSettingsJsonPath();
-                if (is_file($settingsPath) && is_readable($settingsPath)) {
-                    $raw = file_get_contents($settingsPath);
-                    if ($raw !== false) {
-                        $dec = json_decode($raw, true);
-                        if (is_array($dec)) {
-                            $protected = filter_var($dec['security']['password_protection'] ?? false, FILTER_VALIDATE_BOOLEAN);
-                            $isPublicMode = !$protected;
-                            $currentUserPassword = (string)($dec['security']['user_password'] ?? '');
-                            $likesUniqueCountup = filter_var($dec['features']['likes']['unique_countup'] ?? false, FILTER_VALIDATE_BOOLEAN);
-                            $viewsUniqueCountup = filter_var($dec['features']['views']['unique_countup'] ?? false, FILTER_VALIDATE_BOOLEAN);
-                            $autoplayEnabled = filter_var($dec['features']['autoplay'] ?? Config::get('features.autoplay', true), FILTER_VALIDATE_BOOLEAN);
-                        }
-                    }
-                }
-            }
-            ?>
-            <div class="space-y-16">
-                <!-- サイト情報セクション（最上部） -->
-                <div class="space-y-12 settings-section">
-                    <h3 class="font-semibold border-b border-gray-200 pb-3">サイト設定</h3>
-                    <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-3 sm:items-center">
-                        <label for="site-name-input" class="font-bold settings-label">サイト名</label>
-                        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-3">
-                            <?php $siteName = Config::get('app.name', 'MyTube'); ?>
-                            <input id="site-name-input" type="text" class="px-4 py-3 rounded-lg admin-input w-full sm:w-80" value="<?= htmlspecialchars($siteName, ENT_QUOTES, 'UTF-8') ?>" autocomplete="off" spellcheck="false">
-                            <button id="save-site-name-btn" class="px-5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap w-full sm:w-auto">変更</button>
-                        </div>
-                    </div>
-
-                    <!-- サイト説明（サイト名の下に配置） -->
-                    <div class="flex flex-col space-y-6">
-                        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-3 sm:items-start">
-                            <label for="site-description-input" class="font-bold settings-label mt-1 whitespace-nowrap flex-shrink-0">サイト説明</label>
-                            <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-3 w-full">
-                                <?php $siteDescription = (string)Config::get('app.description', ''); ?>
-                                <textarea id="site-description-input" class="px-4 py-3 rounded-lg admin-input w-full sm:w-[40rem] min-h-[84px]" autocomplete="off" spellcheck="false" placeholder="サイトの説明文を入力（任意）"><?= htmlspecialchars($siteDescription, ENT_QUOTES, 'UTF-8') ?></textarea>
-                                <button id="save-site-description-btn" class="px-5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap w-full sm:w-auto self-start">変更</button>
-                            </div>
-                        </div>
-                        <p class="text-sm ml-0 leading-relaxed settings-description w-full">この説明はメタデータ（description）として使用されます。（見た目上は表示されません）</p>
-                    </div>
-
-                    <!-- サイトロゴ（サイト説明とデフォルトテーマの間に配置） -->
-                    <?php
-                        $brandUserLogoRel = 'data/branding/logo-square.png';
-                        $brandDefaultLogoRel = 'images/logo.png';
-                        $brandUserLogoAbs = __DIR__ . '/' . $brandUserLogoRel;
-                        $brandDefaultLogoAbs = __DIR__ . '/' . $brandDefaultLogoRel;
-                        if (is_file($brandUserLogoAbs)) {
-                            $brandLogoPreviewSrc = $brandUserLogoRel . '?v=' . filemtime($brandUserLogoAbs);
-                        } else {
-                            $brandLogoPreviewSrc = $brandDefaultLogoRel . '?v=' . (file_exists($brandDefaultLogoAbs) ? filemtime($brandDefaultLogoAbs) : '1.0.0');
-                        }
-                    ?>
-                    <div class="flex flex-col space-y-6">
-                        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-3 sm:items-start">
-                            <label class="font-bold settings-label mt-1 whitespace-nowrap flex-shrink-0">サイトロゴ</label>
-                            <div class="flex flex-col space-y-4 w-full">
-                                <div class="flex flex-col md:flex-row md:items-center gap-4">
-                                    <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border border-[color:var(--table-border)] bg-gray-50 flex items-center justify-center flex-shrink-0">
-                                        <img id="brand-logo-preview" alt="プレビュー" class="w-full h-full object-cover" src="<?= htmlspecialchars($brandLogoPreviewSrc, ENT_QUOTES, 'UTF-8') ?>" />
-                                        <span id="brand-logo-preview-placeholder" class="text-xs text-gray-400" style="display:none;">選択した画像のプレビュー</span>
-                                    </div>
-
-                                    <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-3 space-y-3 sm:space-y-0 w-full">
-                                        <!-- 隠しファイル入力 -->
-                                        <input id="brand-logo-file" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" />
-
-                                        <!-- カスタム参照ボタン -->
-                                        <button id="select-brand-logo-btn" type="button" class="px-5 py-3 bg-white text-gray-800 rounded-lg border border-gray-300 hover:bg-gray-50 whitespace-nowrap w-full sm:w-auto">ロゴ画像を選択</button>
-
-                                        <!-- 実行ボタン群 -->
-                                        <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-3 space-y-3 sm:space-y-0 w-full sm:w-auto">
-                                            <button id="upload-brand-logo-btn" class="px-5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap w-full sm:w-auto">変更</button>
-                                            <button id="reset-brand-logo-btn" class="px-5 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 whitespace-nowrap w-full sm:w-auto">リセット</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="text-sm text-gray-600 leading-relaxed">
-                                    推奨サイズ: 512×512 以上（PNG/JPEG/WebP）。
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- デフォルトテーマ設定（サイト情報） -->
-                    <div class="flex flex-col space-y-6">
-                        <div class="flex items-center justify-start space-x-6">
-                            <label class="font-bold settings-label" for="theme-select">デフォルトテーマ</label>
-                            <?php $defaultTheme = Config::get('ui.theme', 'light');
-                            $defaultTheme = in_array(strtolower($defaultTheme), ['light', 'dark']) ? strtolower($defaultTheme) : 'light'; ?>
-                            <select id="theme-select" class="px-4 py-3 rounded-lg admin-input w-40">
-                                <option value="light" <?= $defaultTheme === 'light' ? 'selected' : '' ?>>ライト</option>
-                                <option value="dark" <?= $defaultTheme === 'dark' ? 'selected' : '' ?>>ダーク</option>
-                            </select>
-                        </div>
-                        <p class="text-sm ml-0 leading-relaxed settings-description">初回訪問や未設定時に適用するテーマを選択します</p>
+        <!-- サイト -->
+        <section class="settings-card">
+            <h2 class="settings-card__title">サイト</h2>
+            <div class="setting">
+                <label class="setting__label" for="site-name-input">サイト名</label>
+                <div class="setting__control">
+                    <div class="setting__row">
+                        <input id="site-name-input" type="text" class="input" value="<?= htmlspecialchars($siteName, ENT_QUOTES, 'UTF-8') ?>" autocomplete="off" spellcheck="false">
+                        <button type="button" id="save-site-name-btn" class="btn btn--primary">保存</button>
                     </div>
                 </div>
-                <!-- 保護設定セクション -->
-                <div class="space-y-12 settings-section">
-                    <h3 class="font-semibold border-b border-gray-200 pb-3">セキュリティ設定</h3>
-                    <?php $___envAdmin = $_ENV['ADMIN_PASSWORD'] ?? $_SERVER['ADMIN_PASSWORD'] ?? getenv('ADMIN_PASSWORD'); $___envManaged = is_string($___envAdmin) && $___envAdmin !== ''; ?>
-                    <?php if (!$___envManaged): ?>
-                    <!-- 管理者パスワード変更（パスワードで保護する の上に配置） -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div class="flex flex-col space-y-4">
-                            <label class="font-bold settings-label">管理者パスワードの変更</label>
-                            <div class="pl-4 flex flex-col space-y-3">
-                                <input id="admin-current-pw" type="password" class="px-4 py-3 rounded-lg admin-input w-full sm:w-80" placeholder="現在のパスワード" autocomplete="current-password">
-                                <input id="admin-new-pw" type="password" class="px-4 py-3 rounded-lg admin-input w-full sm:w-80" placeholder="新しいパスワード（8文字以上）" autocomplete="new-password">
-                                <div class="flex items-center gap-3">
-                                    <button id="change-admin-pw-btn" class="px-5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap w-full sm:w-auto">変更</button>
-                                    <button id="toggle-admin-pw-visibility" type="button" class="px-3 py-2 admin-input rounded-lg whitespace-nowrap">表示/非表示</button>
-                                </div>
-                                
-                            </div>
-                        </div>
-                    </div>
-                    <?php endif; ?>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <!-- 保護設定ブロック -->
-                        <div class="flex flex-col space-y-6">
-                            <div class="flex items-center justify-between md:justify-start md:space-x-6">
-                                <span class="font-bold settings-label">パスワードで保護する</span>
-                                <label class="inline-flex items-center cursor-pointer">
-                                    <input id="public-mode-toggle" type="checkbox" class="sr-only peer" <?= $isPublicMode ? '' : 'checked' ?>>
-                                    <div class="w-11 h-6 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:border after:rounded-full after:h-5 after:w-5 after:transition-all relative toggle-switch"></div>
-                                </label>
-                            </div>
-                            <p class="text-sm ml-0 leading-relaxed settings-description">ON: サイト全体の閲覧にパスワード認証が必要 / OFF: 認証なしで閲覧可能</p>
-                        </div>
-
-                        <!-- パスワードブロック -->
-                        <div id="user-password-block" class="<?= $isPublicMode ? 'blocked-section' : '' ?> pl-4 md:pl-6">
-                            <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-3 sm:items-center">
-                                <label for="user-password-input" class="font-bold settings-label">パスワード</label>
-                                <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-3">
-                                    <?php /* $currentUserPassword は上で決定済み */ ?>
-                                    <input id="user-password-input" type="text" class="px-4 py-3 rounded-lg admin-input w-full sm:w-64" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="latin" pattern="[ -~]+" title="半角英数字と記号のみ" value="">
-                                    <button id="save-settings-btn" class="px-5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap w-full sm:w-auto">変更</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 機能設定セクション -->
-                <div class="space-y-12 settings-section">
-                    <h3 class="font-semibold border-b border-gray-200 pb-3">機能設定</h3>
-
-                    <!-- 自動再生（単独ブロック） -->
-                    <div class="space-y-6">
-                        <h4 class="font-semibold text-muted">動画再生</h4>
-                        <div class="pl-4 flex items-center justify-between md:justify-start md:space-x-6">
-                            <span class="font-bold settings-label">動画の自動再生</span>
-                            <label class="inline-flex items-center cursor-pointer">
-                                <input id="autoplay-toggle" type="checkbox" class="sr-only peer" <?= $autoplayEnabled ? 'checked' : '' ?>>
-                                <div class="w-11 h-6 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:border after:rounded-full after:h-5 after:w-5 after:transition-all relative toggle-switch"></div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- カウント制限（いいね／再生数） -->
-                    <div class="space-y-6">
-                        <h4 class="font-semibold text-muted">カウント制限</h4>
-                        <div class="pl-4 grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <!-- いいね設定 -->
-                            <div class="flex flex-col space-y-6">
-                                <div class="flex items-center justify-between md:justify-start md:space-x-6">
-                                    <span class="font-bold settings-label">いいねの重複カウントを制限</span>
-                                    <label class="inline-flex items-center cursor-pointer">
-                                        <input id="likes-unique-toggle" type="checkbox" class="sr-only peer" <?= $likesUniqueCountup ? 'checked' : '' ?>>
-                                        <div class="w-11 h-6 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:border after:rounded-full after:h-5 after:w-5 after:transition-all relative toggle-switch"></div>
-                                    </label>
-                                </div>
-                                <p class="text-sm ml-0 leading-relaxed settings-description">ON: 重複いいねを制限 / OFF: 重複いいねを許可</p>
-                            </div>
-
-                            <!-- 再生数設定 -->
-                            <div class="flex flex-col space-y-6">
-                                <div class="flex items-center justify-between md:justify-start md:space-x-6">
-                                    <span class="font-bold settings-label">再生数の重複カウントを制限</span>
-                                    <label class="inline-flex items-center cursor-pointer">
-                                        <input id="views-unique-toggle" type="checkbox" class="sr-only peer" <?= $viewsUniqueCountup ? 'checked' : '' ?>>
-                                        <div class="w-11 h-6 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:border after:rounded-full after:h-5 after:w-5 after:transition-all relative toggle-switch"></div>
-                                    </label>
-                                </div>
-                                <p class="text-sm ml-0 leading-relaxed settings-description">ON: 重複再生を制限 / OFF: 重複再生を許可</p>
-                            </div>
-                        </div>
-                    </div>
-
-
-                </div>
-
             </div>
-        </div>
-    </div>
+            <div class="setting">
+                <label class="setting__label" for="site-description-input">サイトの説明<small>検索結果などに使われる説明文です（画面には表示されません）</small></label>
+                <div class="setting__control">
+                    <textarea id="site-description-input" class="textarea" autocomplete="off" spellcheck="false" placeholder="サイトの説明（任意）" style="max-width: 560px;"><?= htmlspecialchars($siteDescription, ENT_QUOTES, 'UTF-8') ?></textarea>
+                    <div><button type="button" id="save-site-description-btn" class="btn btn--primary">保存</button></div>
+                </div>
+            </div>
+            <div class="setting">
+                <span class="setting__label">サイトのロゴ<small>正方形・512×512 以上がおすすめ（PNG / JPEG / WebP）</small></span>
+                <div class="setting__control">
+                    <div class="setting__row setting__row--logo">
+                        <div class="logo-preview">
+                            <img id="brand-logo-preview" alt="ロゴのプレビュー" src="<?= htmlspecialchars($brandLogoPreviewSrc, ENT_QUOTES, 'UTF-8') ?>">
+                            <span id="brand-logo-preview-placeholder" style="display:none;">プレビュー</span>
+                        </div>
+                        <input id="brand-logo-file" type="file" accept="image/png,image/jpeg,image/webp" class="hidden">
+                        <div class="logo-actions">
+                            <button id="select-brand-logo-btn" type="button" class="btn">画像を選択</button>
+                            <button id="upload-brand-logo-btn" type="button" class="btn btn--primary">保存</button>
+                            <button id="reset-brand-logo-btn" type="button" class="btn btn--ghost">元に戻す</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="setting">
+                <label class="setting__label" for="theme-select">最初のテーマ<small>初めて開いた人に表示するテーマ（各自が切り替えた場合はそちらを優先）</small></label>
+                <div class="setting__control">
+                    <div class="setting__row">
+                        <select id="theme-select" class="select" style="max-width: 200px;">
+                            <option value="light" <?= $defaultTheme === 'light' ? 'selected' : '' ?>>ライト</option>
+                            <option value="dark" <?= $defaultTheme === 'dark' ? 'selected' : '' ?>>ダーク</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-    <script src="assets/js/settings.js?v=<?= $settingsJsVersion ?>" defer></script>
+        <!-- セキュリティ -->
+        <section class="settings-card">
+            <h2 class="settings-card__title">セキュリティ</h2>
+            <div class="setting">
+                <span class="setting__label">パスワードで保護する<small>オンにすると、見るときにパスワードが必要になります</small></span>
+                <div class="setting__control setting__switch">
+                    <label class="switch">
+                        <input id="public-mode-toggle" type="checkbox" <?= $isPublicMode ? '' : 'checked' ?>>
+                        <span class="switch__track" aria-hidden="true"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="setting" id="user-password-block-row">
+                <label class="setting__label" for="user-password-input">閲覧用のパスワード<small>見る人に伝えるパスワード（半角英数字と記号）</small></label>
+                <div class="setting__control">
+                    <div id="user-password-block" class="setting__row <?= $isPublicMode ? 'blocked-section' : '' ?>">
+                        <input id="user-password-input" type="text" class="input" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="latin" pattern="[ -~]+" title="半角英数字と記号のみ" value="">
+                        <button type="button" id="save-settings-btn" class="btn btn--primary">保存</button>
+                    </div>
+                </div>
+            </div>
+            <?php if (!$adminPasswordManagedByEnv): ?>
+            <div class="setting">
+                <span class="setting__label">管理者パスワードの変更<small>8文字以上</small></span>
+                <div class="setting__control">
+                    <div class="setting__row"><input id="admin-current-pw" type="password" class="input" placeholder="現在のパスワード" autocomplete="current-password"></div>
+                    <div class="setting__row"><input id="admin-new-pw" type="password" class="input" placeholder="新しいパスワード" autocomplete="new-password"></div>
+                    <div class="setting__row">
+                        <button type="button" id="change-admin-pw-btn" class="btn btn--primary">変更</button>
+                        <button type="button" id="toggle-admin-pw-visibility" class="btn btn--ghost">パスワードを表示</button>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+        </section>
+
+        <!-- 再生とカウント -->
+        <section class="settings-card">
+            <h2 class="settings-card__title">再生とカウント</h2>
+            <div class="setting">
+                <span class="setting__label">動画の自動再生<small>動画ページを開いたら自動で再生を始めます</small></span>
+                <div class="setting__control setting__switch">
+                    <label class="switch">
+                        <input id="autoplay-toggle" type="checkbox" <?= $autoplayEnabled ? 'checked' : '' ?>>
+                        <span class="switch__track" aria-hidden="true"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="setting">
+                <span class="setting__label">再生数の重複カウントを制限<small>オンにすると、同じ人がブラウザのタブを閉じるまでは1回だけ数えます</small></span>
+                <div class="setting__control setting__switch">
+                    <label class="switch">
+                        <input id="views-unique-toggle" type="checkbox" <?= $viewsUniqueCountup ? 'checked' : '' ?>>
+                        <span class="switch__track" aria-hidden="true"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="setting">
+                <span class="setting__label">いいねの重複カウントを制限<small>オンにすると、同じ人がブラウザのタブを閉じるまでは1回だけ数えます</small></span>
+                <div class="setting__control setting__switch">
+                    <label class="switch">
+                        <input id="likes-unique-toggle" type="checkbox" <?= $likesUniqueCountup ? 'checked' : '' ?>>
+                        <span class="switch__track" aria-hidden="true"></span>
+                    </label>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="assets/js/settings.js?v=<?= getAssetVersion('assets/js/settings.js') ?>" defer></script>
     <?php include 'footer.php'; ?>
 </body>
 

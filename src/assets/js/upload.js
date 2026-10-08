@@ -1,4 +1,4 @@
-// Upload page script extracted from inline JS
+// 動画のアップロードページ（upload.php）の動き。Resumable.js で分割して送信する
 (function(){
   document.addEventListener('DOMContentLoaded', function(){
     // Utility to read meta by name
@@ -250,7 +250,7 @@
           if (commentInput) commentInput.parentElement.style.display = 'block';
 
           uploadButton.disabled = false;
-          uploadButton.innerHTML = '\n          <svg class="w-6 h-6 md:w-7 md:h-7 inline mr-2 md:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">\n            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>\n          </svg>\n          アップロード\n        ';
+          uploadButton.textContent = 'アップロード';
         }
       });
     }
@@ -284,7 +284,7 @@
       if (commentInput) commentInput.parentElement.style.display = 'none';
 
       uploadButton.disabled = true;
-      uploadButton.innerHTML = '\n        <svg class="w-6 h-6 md:w-7 md:h-7 inline mr-2 md:mr-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">\n          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>\n        </svg>\n        アップロード中...\n      ';
+      uploadButton.textContent = 'アップロード中...';
       if (uploadProgress) uploadProgress.classList.remove('hidden');
 
       // Initialize Resumable
@@ -388,8 +388,16 @@
       var videoPlayUrl = 'index.php';
       if (videoId) videoPlayUrl = 'index.php?v=' + encodeURIComponent(videoId);
       var successMessage = document.createElement('div');
-      successMessage.className = 'mt-6 md:mt-8 p-4 md:p-6 video-info-container rounded-lg animate-fade-in';
-      successMessage.innerHTML = '\n        <div class="flex items-center">\n          <svg class="w-6 h-6 md:w-7 md:h-7 text-green-400 mr-2 md:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">\n            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>\n          </svg>\n          <div>\n            <h3 class="video-title-main font-medium">アップロード完了</h3>\n            <p class="video-meta-info text-base md:text-lg">動画が正常にアップロードされました。</p>\n          </div>\n        </div>\n        <div class="mt-4 md:mt-6">\n          <div class="flex flex-col md:flex-row gap-3 md:gap-4">\n            <a href="' + videoPlayUrl + '" class="w-full md:w-auto px-4 py-3 md:py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white text-base md:text-sm rounded-lg hover:from-indigo-600 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg transform hover:-translate-y-0.5">\n              <svg class="w-5 h-5 md:w-4 md:h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">\n                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>\n              </svg>\n              動画を再生\n            </a>\n            <a href="admin.php" class="w-full md:w-auto px-4 py-3 md:py-2 bg-gradient-to-r from-slate-600 to-slate-700 text-white text-base md:text-sm rounded-lg hover:from-slate-700 hover:to-slate-800 transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg transform hover:-translate-y-0.5">\n              <svg class="w-5 h-5 md:w-4 md:h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">\n                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>\n                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>\n              </svg>\n              管理パネルへ\n            </a>\n            <button onclick="continueUpload()" class="w-full md:w-auto px-4 py-3 md:py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-base md:text-sm rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg transform hover:-translate-y-0.5">\n              <svg class="w-5 h-5 md:w-4 md:h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">\n                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>\n              </svg>\n              続けてアップロードする\n            </button>\n          </div>\n        </div>\n      ';
+      successMessage.className = 'upload-done';
+      successMessage.id = 'upload-done';
+      successMessage.innerHTML =
+        '<h3 class="upload-done__title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>アップロードが完了しました</h3>' +
+        '<p>動画ページで再生できます。</p>' +
+        '<div class="upload-done__actions">' +
+          '<a href="' + videoPlayUrl + '" class="btn btn--primary">動画を見る</a>' +
+          '<a href="admin.php" class="btn">動画の管理へ</a>' +
+          '<button type="button" class="btn" onclick="continueUpload()">続けてアップロード</button>' +
+        '</div>';
       uploadForm.parentNode.insertBefore(successMessage, uploadForm.nextSibling);
     }
 
@@ -403,21 +411,12 @@
       if (titleInput) titleInput.parentElement.style.display = 'block';
       if (commentInput) commentInput.parentElement.style.display = 'block';
       uploadButton.disabled = false;
-      uploadButton.innerHTML = '\n        <svg class="w-6 h-6 md:w-7 md:w-7 inline mr-2 md:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">\n          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>\n        </svg>\n        アップロード失敗\n      ';
-      uploadButton.classList.remove('upload-button', 'from-green-600', 'to-green-700');
-      uploadButton.classList.add('upload-button', 'from-red-600', 'to-red-700');
+      uploadButton.textContent = 'もう一度アップロード';
     }
 
     function continueUpload() {
-      var successMessage = document.getElementById('success-message');
-      if (successMessage) successMessage.remove();
-      var dynamicSuccessMessages = document.querySelectorAll('.video-info-container.animate-fade-in');
-      dynamicSuccessMessages.forEach(function(message) {
-        var h3 = message.querySelector('h3');
-        if (h3 && h3.textContent.indexOf('アップロード完了') !== -1) {
-          message.remove();
-        }
-      });
+      var doneMessage = document.getElementById('upload-done');
+      if (doneMessage) doneMessage.remove();
       uploadForm.reset();
       var titleInput = document.getElementById('title-input');
       var commentInput = document.getElementById('comment-input');
@@ -425,9 +424,9 @@
       if (commentInput) commentInput.parentElement.style.display = 'block';
       if (fileName) fileName.classList.add('hidden');
       if (videoPreview) videoPreview.classList.add('hidden');
-      uploadButton.style.display = 'block';
+      uploadButton.style.display = '';
       uploadButton.disabled = false;
-      uploadButton.innerHTML = '\n        <svg class="w-6 h-6 md:w-7 md:h-7 inline mr-2 md:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">\n          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>\n        </svg>\n        アップロード\n      ';
+      uploadButton.textContent = 'アップロード';
       uploadProgress.classList.add('hidden');
       if (progressBar) progressBar.style.width = '0%';
       if (progressPercentage) progressPercentage.textContent = '0%';
