@@ -397,6 +397,27 @@ body {
   font-weight: 600;
   cursor: pointer;
 }
+/* 音を消して自動再生したときの「音を出す」 */
+.unmute-btn {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px 0 10px;
+  border: none;
+  border-radius: 18px;
+  background: rgba(28, 28, 28, 0.9);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.unmute-btn:hover { background: rgba(0, 0, 0, 0.95); }
+.unmute-btn svg { width: 20px; height: 20px; }
 .upnext-overlay {
   position: absolute;
   inset: 0;
