@@ -59,8 +59,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'list_videos') {
     exit;
 }
 
-// 動画一覧を取得（構造化データ。公開中のすべて）
-$videos = getSortedVideos();
+// トップページで選んでいる並べ替え（次の動画もこの順に並べる）
+$sort = $_COOKIE['sort_preference'] ?? 'new';
+if (!in_array($sort, ['new', 'popular', 'views', 'likes'], true)) {
+    $sort = 'new';
+}
+$sortLabels = ['new' => '新しい順', 'popular' => '人気順', 'views' => '再生数順', 'likes' => 'いいね数順'];
+
+// 動画一覧を取得（構造化データ。公開中のすべてを、選んでいる並べ替えの順で）
+$videos = getSortedVideos($sort);
 
 // 検索語（ヘッダーの検索欄から）と、一致した件数
 $searchQuery = normalizeSearchQuery($_GET['q'] ?? '');
@@ -71,8 +78,6 @@ $videoFiles = array_values(array_filter(array_map(function($v){
     return isset($v['filename']) ? (string)$v['filename'] : null;
 }, $videos)));
 
-// ソート表示用（UIのアクティブ表示に使用）
-$sort = $_COOKIE['sort_preference'] ?? 'new';
 
 // 再生対象（?v=...）
 $currentVideo = isset($_GET['v']) ? basename((string)$_GET['v']) : null;
@@ -145,13 +150,18 @@ if ($currentVideo && !$isPrivatePreview && isPasswordProtectionEnabled()) {
     }
 }
 
-// ランダム動画（サイドバー）
-$randomVideos = [];
-if (count($videoFiles) > 1 && $currentVideo) {
-    $availableVideos = array_values(array_filter($videoFiles, fn($v) => $v !== $currentVideo));
-    if (count($availableVideos) > 0) {
-        shuffle($availableVideos);
-        $randomVideos = array_slice($availableVideos, 0, min(12, count($availableVideos)));
+// 次の動画（サイドバー）: トップページの並び順で、今の動画の次から12本（最後まで行ったら先頭に戻る）
+// 自動再生もこの先頭へ進むため、プレイリストのように一覧の順番どおりに見ていける
+$nextVideos = [];
+if ($currentVideo && count($videoFiles) > 0) {
+    $position = array_search($currentVideo, $videoFiles, true);
+    $start = $position === false ? 0 : $position + 1; // 非公開の動画（一覧にない）は先頭から
+    $total = count($videoFiles);
+    for ($i = 0; $i < $total && count($nextVideos) < 12; $i++) {
+        $candidate = $videoFiles[($start + $i) % $total];
+        if ($candidate !== $currentVideo) {
+            $nextVideos[] = $candidate;
+        }
     }
 }
 
@@ -296,9 +306,9 @@ $pageCss = 'home';
       <?php if (!$isSharedAccess): ?>
       <!-- 次の動画（関連動画） -->
       <aside class="watch__secondary">
-        <?php if (!empty($randomVideos)): ?>
+        <?php if (!empty($nextVideos)): ?>
         <div class="upnext-head">
-          <h2 class="upnext-head__title">次の動画</h2>
+          <h2 class="upnext-head__title">次の動画 <span class="upnext-head__order"><?= htmlspecialchars($sortLabels[$sort]) ?></span></h2>
           <label class="autoplay-switch" title="見終わったら次の動画を自動で再生します">
             <span>自動再生</span>
             <input type="checkbox" id="autoplay-next-toggle">
@@ -306,7 +316,7 @@ $pageCss = 'home';
           </label>
         </div>
         <div class="related-list">
-          <?php foreach ($randomVideos as $video):
+          <?php foreach ($nextVideos as $video):
             $basename = pathinfo($video, PATHINFO_FILENAME);
             $thumbPath = "thumbnails/{$basename}.jpg";
             $thumbUrl = file_exists($thumbPath) ? ($thumbPath . '?v=' . filemtime($thumbPath)) : 'images/default-thumbnail-small.svg';

@@ -609,3 +609,9 @@ body {
   color: var(--ui-text-2);
 }
 .login-recovery form { margin-top: 12px; }
+.upnext-head__order {
+  margin-left: 4px;
+  color: var(--ui-text-2);
+  font-size: 13px;
+  font-weight: 400;
+}
